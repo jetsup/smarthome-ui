@@ -51,6 +51,12 @@ const routes = [
         component: () => import('../views/NodeDiscovery.vue'),
         meta: { title: 'Find Nodes' },
       },
+      {
+        path: 'nodes/:nodeId',
+        name: 'NodeDetail',
+        component: () => import('../views/NodeDetail.vue'),
+        meta: { title: 'Node' },
+      },
     ],
   },
 ]

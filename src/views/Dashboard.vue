@@ -2,16 +2,16 @@
   <div class="dash fade-in">
     <div class="stats-row">
       <div class="stat-card card">
-        <span class="stat-num">{{ gateways.length }}</span>
+        <span class="stat-num">{{ stats.gateways }}</span>
         <span class="stat-label">Gateways</span>
       </div>
       <div class="stat-card card">
-        <span class="stat-num">{{ totalNodes }}</span>
+        <span class="stat-num">{{ stats.nodes }}</span>
         <span class="stat-label">Nodes</span>
       </div>
-      <div class="stat-card card">
-        <span class="stat-num">{{ onlineCount }}</span>
-        <span class="stat-label">Online</span>
+      <div class="stat-card card online-card">
+        <span class="stat-num">{{ stats.onlineGateways }} / {{ stats.onlineNodes }}</span>
+        <span class="stat-label">Online (Gateway / Node)</span>
       </div>
     </div>
 
@@ -40,7 +40,7 @@
         </div>
         <div class="gw-card-meta">
           <span>ID: <code>{{ gw.id }}</code></span>
-          <span>{{ gw.nodeCount || 0 }} nodes</span>
+          <span>{{ gw.nodeCount || 0 }} nodes ({{ gw.onlineNodes || 0 }} online)</span>
         </div>
       </router-link>
     </div>
@@ -48,17 +48,54 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useGatewayStore } from '../stores/gateways'
+import api from '../services/api'
 
 const store = useGatewayStore()
 
 const gateways = computed(() => store.gateways)
 const loading = computed(() => store.loading)
-const totalNodes = computed(() => store.gateways.reduce((s, g) => s + (g.nodeCount || 0), 0))
-const onlineCount = computed(() => store.gateways.filter((g) => g.online).length)
 
-onMounted(() => store.fetchAll())
+const stats = ref({
+  gateways: 0,
+  nodes: 0,
+  onlineGateways: 0,
+  onlineNodes: 0,
+  gatewayList: [],
+  onlineNodeList: [],
+})
+
+let pollTimer = null
+
+async function fetchStats() {
+  try {
+    const { data } = await api.get('/stats')
+    stats.value = data
+  } catch {
+    // ignore
+  }
+}
+
+async function fetchAll() {
+  await Promise.all([
+    store.fetchAll(),
+    fetchStats(),
+  ])
+}
+
+function startPolling() {
+  pollTimer = setInterval(fetchStats, 10000)
+}
+
+onMounted(() => {
+  fetchAll()
+  startPolling()
+})
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
+})
 </script>
 
 <style scoped>
@@ -86,10 +123,100 @@ onMounted(() => store.fetchAll())
   color: #0969da;
 }
 
+.online-card .stat-num {
+  font-size: 1.5rem;
+}
+
 .stat-label {
   color: #656d76;
   font-size: 0.85rem;
   margin-top: 0.15rem;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.section {
+  padding: 1.25rem;
+}
+
+.section h4 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #1f2328;
+}
+
+.empty-hint {
+  color: #656d76;
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+.online-item {
+  margin-bottom: 0.35rem;
+}
+
+.online-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  transition: background 0.15s;
+}
+
+.online-link:hover {
+  background: #f6f8fa;
+}
+
+.online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-green {
+  background: #3fb950;
+}
+
+.dot-gray {
+  background: #8b949e;
+}
+
+.online-link code {
+  background: #f3f4f6;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.node-badge {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: #656d76;
+}
+
+.gw-tag {
+  font-size: 0.7rem;
+  color: #656d76;
+  background: #f3f4f6;
+  padding: 0.05rem 0.3rem;
+  border-radius: 4px;
+}
+
+.val-badge {
+  margin-left: auto;
+  font-weight: 600;
+  color: #0969da;
 }
 
 .dash-header {
@@ -154,5 +281,10 @@ onMounted(() => store.fetchAll())
 
 .empty-state p {
   margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+  .stats-row { flex-direction: column; }
+  .dash-grid { grid-template-columns: 1fr; }
 }
 </style>

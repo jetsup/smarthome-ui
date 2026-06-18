@@ -2,7 +2,7 @@
   <div class="fade-in">
     <router-link to="/gateways" class="back-link">&larr; Back to Gateways</router-link>
 
-    <div v-if="loading" class="state-msg">Loading…</div>
+    <div v-if="initialLoading" class="state-msg">Loading…</div>
 
     <div v-else-if="!gw" class="empty-state card">
       <p>Gateway not found.</p>
@@ -13,7 +13,11 @@
       <div class="detail-header">
         <div>
           <h3 class="gw-title">{{ gw.name }}</h3>
-          <p class="gw-meta">ID: <code>{{ gw.id }}</code> | API Key: <code>{{ maskedKey }}</code></p>
+          <p class="gw-meta">
+            ID: <code>{{ gw.id }}</code> |
+            API Key: <code>{{ maskedKey }}</code> |
+            Last Seen: {{ gw.lastSeen ? relTime(gw.lastSeen) : 'Never' }}
+          </p>
         </div>
         <span :class="['badge', gw.online ? 'badge-online' : 'badge-offline']">
           {{ gw.online ? 'Online' : 'Offline' }}
@@ -45,9 +49,12 @@
           </button>
         </div>
 
+        <div v-if="pollError" class="poll-error">{{ pollError }}</div>
+
         <table class="node-table">
           <thead>
             <tr>
+              <th>Node ID</th>
               <th>Device ID</th>
               <th>API Key</th>
               <th>Value</th>
@@ -57,23 +64,31 @@
             </tr>
           </thead>
           <tbody v-if="combined.length > 0">
-            <tr v-for="item in combined" :key="item.deviceId">
+            <tr v-for="item in combined" :key="item.deviceId"
+                :class="{ 'clickable': item.linked && item.nodeId }"
+                @click="item.linked && item.nodeId ? $router.push('/nodes/' + item.nodeId) : null">
+              <td><code>{{ item.nodeId || '—' }}</code></td>
               <td><code>{{ item.deviceId }}</code></td>
-              <td><code class="api-key">{{ item.apiKey ? maskedAPIKey(item.apiKey) : '—' }}</code></td>
-              <td>{{ item.value != null ? item.value : '—' }}</td>
+              <td><code class="api-key">{{ item.apiKey ? maskedAPIKey(item.apiKey) : item.provisioning ? 'provisioning…' : '—' }}</code></td>
+              <td>{{ item.value != null ? item.value : (item.provisioning ? 'awaiting first report' : '—') }}</td>
               <td>
                 <span :class="['badge', badgeClass(item)]">
                   {{ badgeLabel(item) }}
                 </span>
               </td>
-              <td>{{ item.lastSeen ? relTime(item.lastSeen) : '—' }}</td>
-              <td class="action-cell">
-                <button v-if="item.linked && !item.inDiscovery" @click="confirmDisconnect(item)" class="btn btn-danger btn-sm">Disconnect</button>
+              <td>{{ item.lastSeen ? relTime(item.lastSeen) : (item.provisioning ? 'waiting…' : '—') }}</td>
+              <td class="action-cell" @click.stop>
+                <button v-if="item.provisioning" class="btn btn-secondary btn-sm" disabled>Provisioning…</button>
+                <button v-else-if="item.linked && !item.inDiscovery" @click="confirmDisconnect(item)" class="btn btn-danger btn-sm">Disconnect</button>
                 <button v-else @click="confirmLink(item)" class="btn btn-primary btn-sm">Connect</button>
               </td>
             </tr>
           </tbody>
         </table>
+
+        <div v-if="combined.length === 0 && !scanning" class="state-msg" style="padding:1rem">
+          No nodes linked yet. Scan for nearby devices.
+        </div>
       </div>
     </template>
 
@@ -114,20 +129,25 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useGatewayStore } from '../stores/gateways'
 import api from '../services/api'
 
 const route = useRoute()
+const router = useRouter()
 const store = useGatewayStore()
 
 const gw = computed(() => store.currentGateway)
-const loading = computed(() => store.loading)
+const initialLoading = ref(true)
 
 const nodes = ref([])
 const discovered = ref([])
 const scanning = ref(false)
+const pollError = ref('')
+
+// Track provisioning device IDs
+const provisioningIds = ref(new Set())
 
 // Link modal
 const showLinkModal = ref(false)
@@ -143,6 +163,8 @@ const disconnecting = ref(false)
 // Toasts
 const toasts = ref([])
 
+let pollTimer = null
+
 const maskedKey = computed(() => {
   if (!gw.value?.apiKey) return '—'
   const k = gw.value.apiKey
@@ -153,25 +175,45 @@ const onlineCount = computed(() => nodes.value.filter(n => n.isOnline).length)
 
 const combined = computed(() => {
   const linkedIds = new Set(nodes.value.map(n => n.deviceId))
-  const discSet = new Set(discovered.value)
+  const discSet = new Set(discovered.value.map(d => typeof d === 'number' ? d : d.deviceId))
+
   const linked = nodes.value.map(n => ({
     ...n,
     linked: true,
     inDiscovery: discSet.has(n.deviceId),
+    provisioning: provisioningIds.value.has(n.deviceId),
   }))
+
   const unlinked = discovered.value
-    .filter(d => !linkedIds.has(d))
-    .map(d => ({ deviceId: d, linked: false, inDiscovery: true, value: null, isOnline: null, lastSeen: null }))
-  return [...linked, ...unlinked]
+    .filter(d => {
+      const did = typeof d === 'number' ? d : d.deviceId
+      return !linkedIds.has(did) && !provisioningIds.value.has(did)
+    })
+    .map(d => {
+      const did = typeof d === 'number' ? d : d.deviceId
+      return { deviceId: did, linked: false, inDiscovery: true, value: null, isOnline: null, lastSeen: null, nodeId: null }
+    })
+
+  // Add pending provisioning items
+  const pending = []
+  provisioningIds.value.forEach(did => {
+    if (!linkedIds.has(did) && !unlinked.find(u => u.deviceId === did)) {
+      pending.push({ deviceId: did, linked: false, inDiscovery: false, value: null, isOnline: null, lastSeen: null, nodeId: null, provisioning: true })
+    }
+  })
+
+  return [...linked, ...unlinked, ...pending]
 })
 
 function badgeClass(item) {
+  if (item.provisioning) return 'badge-provisioning'
   if (item.isOnline === true) return 'badge-online'
   if (item.isOnline === false) return 'badge-offline'
   return 'badge-discovered'
 }
 
 function badgeLabel(item) {
+  if (item.provisioning) return 'Provisioning'
   if (item.isOnline === true) return 'Online'
   if (item.isOnline === false) return 'Offline'
   return 'Discovered'
@@ -209,12 +251,35 @@ function addToast(message, type = 'success') {
 
 async function fetchData() {
   await store.fetchOne(route.params.id)
-  nodes.value = await store.fetchNodes(route.params.id)
+  await fetchNodes()
+  await fetchDiscovered()
+  initialLoading.value = false
+}
+
+async function fetchGateway() {
+  await store.fetchOne(route.params.id)
+}
+
+async function fetchNodes() {
+  try {
+    nodes.value = await store.fetchNodes(route.params.id)
+    // Remove provisioned nodes from pending set once they appear in linked list
+    const linkedIds = new Set(nodes.value.map(n => n.deviceId))
+    for (const did of linkedIds) {
+      provisioningIds.value.delete(did)
+    }
+    pollError.value = ''
+  } catch (e) {
+    pollError.value = 'Failed to fetch nodes'
+  }
+}
+
+async function fetchDiscovered() {
   try {
     const { data } = await api.get(`/gateways/${route.params.id}/discovered`)
     discovered.value = Array.isArray(data) ? data : []
   } catch {
-    discovered.value = []
+    // ignore
   }
 }
 
@@ -223,8 +288,7 @@ async function scanAndRefresh() {
   try {
     await api.post(`/gateways/${route.params.id}/scan`)
     await new Promise(r => setTimeout(r, 3000))
-    const { data } = await api.get(`/gateways/${route.params.id}/discovered`)
-    discovered.value = Array.isArray(data) ? data : []
+    await fetchDiscovered()
     addToast('Scan complete')
   } catch (e) {
     addToast('Scan failed: ' + (e.response?.data?.error || e.message), 'error')
@@ -243,12 +307,13 @@ async function doLink() {
   linking.value = true
   const deviceId = linkTarget.value.deviceId
   const force = !!linkConflict.value
+  provisioningIds.value.add(deviceId)
   try {
-    const { data } = await store.provisionNode(route.params.id, deviceId, force)
-    addToast(`Node ${deviceId} linked successfully`)
+    await store.provisionNode(route.params.id, deviceId, force)
+    addToast(`Node ${deviceId} linking in progress`)
     showLinkModal.value = false
-    await fetchData()
   } catch (e) {
+    provisioningIds.value.delete(deviceId)
     const errData = e.response?.data
     if (errData?.status === 'gateway_conflict') {
       linkConflict.value = errData.message || 'This node is linked to another gateway.'
@@ -281,7 +346,23 @@ async function doDisconnect() {
   }
 }
 
-onMounted(() => fetchData())
+function startPolling() {
+  pollTimer = setInterval(async () => {
+    await Promise.all([fetchGateway(), fetchNodes(), fetchDiscovered()])
+  }, 5000)
+}
+
+onMounted(() => {
+  fetchData()
+  startPolling()
+})
+
+onUnmounted(() => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+})
 </script>
 
 <style scoped>
@@ -319,7 +400,6 @@ onMounted(() => fetchData())
   font-size: 0.75rem;
 }
 
-/* Stats cards */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -351,7 +431,6 @@ onMounted(() => fetchData())
   margin-top: 0.25rem;
 }
 
-/* Section */
 .section {
   padding: 1.5rem;
 }
@@ -369,7 +448,15 @@ onMounted(() => fetchData())
   margin-bottom: 0;
 }
 
-/* Nodes table */
+.poll-error {
+  background: #ffebe9;
+  color: #cf222e;
+  padding: 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
 .node-table {
   width: 100%;
   border-collapse: collapse;
@@ -388,6 +475,14 @@ onMounted(() => fetchData())
   padding: 0.5rem;
   border-top: 1px solid #f3f4f6;
   font-size: 0.85rem;
+}
+
+.node-table tr.clickable {
+  cursor: pointer;
+}
+
+.node-table tr.clickable:hover {
+  background: #f6f8fa;
 }
 
 .node-table code {
@@ -422,7 +517,6 @@ onMounted(() => fetchData())
   color: #0969da;
 }
 
-/* Badge variants */
 .badge-discovered {
   background: #ddf4ff;
   color: #0550ae;
@@ -432,7 +526,15 @@ onMounted(() => fetchData())
   font-weight: 600;
 }
 
-/* Modal */
+.badge-provisioning {
+  background: #fff8c5;
+  color: #7a5e00;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -492,7 +594,6 @@ onMounted(() => fetchData())
   margin-top: 1rem;
 }
 
-/* Toasts */
 .toast-container {
   position: fixed;
   bottom: 1.5rem;

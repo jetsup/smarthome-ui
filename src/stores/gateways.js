@@ -20,12 +20,15 @@ export const useGatewayStore = defineStore('gateways', {
     },
 
     async fetchOne(id) {
-      this.loading = true
       try {
         const { data } = await api.get(`/gateways/${id}`)
-        this.currentGateway = data
-      } finally {
-        this.loading = false
+        if (this.currentGateway) {
+          Object.assign(this.currentGateway, data)
+        } else {
+          this.currentGateway = data
+        }
+      } catch {
+        // ignore poll errors
       }
     },
 

@@ -23,11 +23,12 @@
         <p class="discovered-hint">Click a node to add it to a gateway.</p>
         <table class="discovered-table">
           <thead>
-            <tr><th>Device ID</th><th>Heard Via</th><th></th></tr>
+            <tr><th>Device ID</th><th>Type</th><th>Heard Via</th><th></th></tr>
           </thead>
           <tbody>
             <tr v-for="d in discovered" :key="d.deviceId + d.gatewayId">
               <td><code>{{ d.deviceId }}</code></td>
+              <td>{{ typeLabel(d.deviceType) }}</td>
               <td><code>{{ d.gatewayId }}</code></td>
               <td>
                 <button class="btn btn-primary btn-sm" @click="openAddDialog(d)">Add</button>
@@ -84,6 +85,19 @@ const selectedNode = ref(null)
 const selectedGateway = ref('')
 const provisioning = ref(false)
 const errorMsg = ref('')
+
+const typeLabels = {
+  0: 'Unknown',
+  1: 'Analog',
+  2: 'Digital',
+  3: 'Relay',
+  4: 'IR',
+  5: 'Hybrid',
+}
+
+function typeLabel(t) {
+  return typeLabels[t] || 'Unknown'
+}
 
 let scanPoll = null
 
