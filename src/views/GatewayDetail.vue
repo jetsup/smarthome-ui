@@ -45,11 +45,7 @@
           </button>
         </div>
 
-        <div v-if="combined.length === 0" class="state-msg">
-          No nodes found. Click "Scan for Nodes" to discover nearby devices.
-        </div>
-
-        <table v-else class="node-table">
+        <table class="node-table">
           <thead>
             <tr>
               <th>Device ID</th>
@@ -60,7 +56,7 @@
               <th>Actions</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody v-if="combined.length > 0">
             <tr v-for="item in combined" :key="item.deviceId">
               <td><code>{{ item.deviceId }}</code></td>
               <td><code class="api-key">{{ item.apiKey ? maskedAPIKey(item.apiKey) : '—' }}</code></td>
