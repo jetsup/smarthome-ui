@@ -40,6 +40,15 @@
         </div>
       </div>
 
+      <!-- Settings link -->
+      <div class="card section settings-card" @click="$router.push('/gateways/' + gw.id + '/settings')">
+        <div class="section-header">
+          <h4>Settings</h4>
+          <span class="chevron">&rsaquo;</span>
+        </div>
+        <p class="settings-desc">WiFi, device configuration, and more.</p>
+      </div>
+
       <!-- Combined nodes table -->
       <div class="card section">
         <div class="section-header">
@@ -630,6 +639,29 @@ onUnmounted(() => {
 @keyframes slide-in {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
+}
+
+.settings-card {
+  cursor: pointer;
+  transition: border-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+.settings-card:hover {
+  border-color: #0969da;
+}
+.settings-card .section-header {
+  margin-bottom: 0.25rem;
+}
+.chevron {
+  font-size: 1.5rem;
+  color: #656d76;
+  line-height: 1;
+}
+.settings-desc {
+  color: #656d76;
+  font-size: 0.8rem;
 }
 
 @media (max-width: 640px) {
