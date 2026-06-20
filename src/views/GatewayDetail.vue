@@ -63,6 +63,7 @@
         <table class="node-table">
           <thead>
             <tr>
+              <th>Name</th>
               <th>Node ID</th>
               <th>Device ID</th>
               <th>API Key</th>
@@ -76,6 +77,7 @@
             <tr v-for="item in combined" :key="item.deviceId"
                 :class="{ 'clickable': item.linked && item.nodeId }"
                 @click="item.linked && item.nodeId ? $router.push('/nodes/' + item.nodeId) : null">
+              <td>{{ item.name || '—' }}</td>
               <td><code>{{ item.nodeId || '—' }}</code></td>
               <td><code>{{ item.deviceId }}</code></td>
               <td><code class="api-key">{{ item.apiKey ? maskedAPIKey(item.apiKey) : item.provisioning ? 'provisioning…' : '—' }}</code></td>
@@ -101,12 +103,40 @@
       </div>
     </template>
 
-    <!-- Link confirmation modal -->
+    <!-- Link / Provision modal -->
     <div v-if="showLinkModal" class="modal-overlay" @click.self="showLinkModal = false">
-      <div class="modal">
-        <h4>Link Node</h4>
-        <p>Link device <code>{{ linkTarget?.deviceId }}</code> to gateway <strong>{{ gw?.name }}</strong>?</p>
-        <p class="modal-note">The node will be provisioned and will appear in the nodes list once it reports in.</p>
+      <div class="modal modal-wide">
+        <h4>Provision Node</h4>
+        <p>Configure device <code>{{ linkTarget?.deviceId }}</code> for gateway <strong>{{ gw?.name }}</strong>.</p>
+
+        <div class="prov-form">
+          <div class="form-group">
+            <label for="node-name">Node Name</label>
+            <input id="node-name" v-model="provName" placeholder="e.g. Living Room Sensor" />
+          </div>
+
+          <div class="form-group">
+            <label>Capabilities</label>
+            <div v-for="(cap, i) in provCaps" :key="i" class="cap-row">
+              <select v-model="cap.type" class="cap-type-select">
+                <option value="digitalOutput">Digital Output</option>
+                <option value="analogOutput">Analog Output</option>
+                <option value="analogInput">Analog Input</option>
+                <option value="digitalInput">Digital Input</option>
+                <option value="relay">Relay</option>
+                <option value="i2c">I2C</option>
+                <option value="uart">UART</option>
+              </select>
+              <input v-if="cap.type !== 'i2c' && cap.type !== 'uart'" v-model.number="cap.pin" type="number" class="cap-pin" placeholder="Pin" />
+              <input v-if="cap.type === 'i2c'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="Addr (hex)" />
+              <input v-if="cap.type === 'uart'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="UART #" />
+              <input v-model="cap.label" class="cap-label" placeholder="Label" />
+              <button @click="provCaps.splice(i, 1)" class="btn btn-danger btn-sm">&times;</button>
+            </div>
+            <button @click="addCap" class="btn btn-secondary btn-sm">+ Add Capability</button>
+          </div>
+        </div>
+
         <div class="modal-actions">
           <button @click="showLinkModal = false" class="btn btn-secondary" :disabled="linking">Cancel</button>
           <button @click="doLink" class="btn btn-primary" :disabled="linking">{{ linking ? 'Linking…' : 'Confirm Link' }}</button>
@@ -158,11 +188,13 @@ const pollError = ref('')
 // Track provisioning device IDs
 const provisioningIds = ref(new Set())
 
-// Link modal
+// Link / Provision modal
 const showLinkModal = ref(false)
 const linkTarget = ref(null)
 const linking = ref(false)
 const linkConflict = ref('')
+const provName = ref('')
+const provCaps = ref([])
 
 // Disconnect modal
 const showDisconnectModal = ref(false)
@@ -171,6 +203,9 @@ const disconnecting = ref(false)
 
 // Toasts
 const toasts = ref([])
+
+// Track gateway online state changes for notifications
+const prevOnline = ref(null)
 
 let pollTimer = null
 
@@ -188,6 +223,7 @@ const combined = computed(() => {
 
   const linked = nodes.value.map(n => ({
     ...n,
+    name: n.name || '',
     linked: true,
     inDiscovery: discSet.has(n.deviceId),
     provisioning: provisioningIds.value.has(n.deviceId),
@@ -267,6 +303,16 @@ async function fetchData() {
 
 async function fetchGateway() {
   await store.fetchOne(route.params.id)
+  // Check for gateway online/offline transitions
+  const current = gw.value?.online
+  if (prevOnline.value !== null && current !== undefined && current !== prevOnline.value) {
+    if (current) {
+      addToast(`Gateway ${gw.value.name} is now online`, 'success')
+    } else {
+      addToast(`Gateway ${gw.value.name} went offline`, 'error')
+    }
+  }
+  prevOnline.value = current
 }
 
 async function fetchNodes() {
@@ -306,9 +352,20 @@ async function scanAndRefresh() {
   }
 }
 
+function defaultPinForType(type) {
+  const pins = { digitalOutput: 2, analogOutput: 26, analogInput: 34, digitalInput: 35, relay: 32, i2c: 0, uart: 0 }
+  return pins[type] ?? 0
+}
+
+function addCap() {
+  provCaps.value.push({ type: 'digitalOutput', pin: 2, extra: 0, label: '' })
+}
+
 function confirmLink(item) {
   linkTarget.value = item
   linkConflict.value = ''
+  provName.value = ''
+  provCaps.value = [{ type: 'digitalOutput', pin: 2, extra: 0, label: '' }]
   showLinkModal.value = true
 }
 
@@ -318,7 +375,13 @@ async function doLink() {
   const force = !!linkConflict.value
   provisioningIds.value.add(deviceId)
   try {
-    await store.provisionNode(route.params.id, deviceId, force)
+    const caps = provCaps.value.map(c => ({
+      type: c.type,
+      pin: c.type !== 'i2c' && c.type !== 'uart' ? (Number(c.pin) || 0) : 0,
+      extra: ['i2c', 'uart'].includes(c.type) ? (Number(c.extra) || 0) : 0,
+      label: c.label || '',
+    }))
+    await store.provisionNode(route.params.id, deviceId, force, provName.value, caps)
     addToast(`Node ${deviceId} linking in progress`)
     showLinkModal.value = false
   } catch (e) {
@@ -561,6 +624,58 @@ onUnmounted(() => {
   width: 400px;
   max-width: 90vw;
   box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.modal-wide {
+  width: 560px;
+}
+
+.prov-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.prov-form label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: #1f2328;
+}
+
+.prov-form input,
+.prov-form select {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+}
+
+.cap-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.cap-type-select {
+  flex: 2;
+  min-width: 0;
+}
+
+.cap-pin {
+  flex: 1;
+  min-width: 0;
+}
+
+.cap-label {
+  flex: 2;
+  min-width: 0;
+}
+
+.cap-row .btn-sm {
+  flex-shrink: 0;
 }
 
 .modal h4 {

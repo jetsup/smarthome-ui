@@ -30,7 +30,7 @@
               </span>
             </td>
             <td>
-              <button class="btn btn-danger btn-sm" @click="remove(gw.id)">Delete</button>
+              <button class="btn btn-danger btn-sm" @click="remove(gw)">Delete</button>
             </td>
           </tr>
         </tbody>
@@ -51,23 +51,48 @@
               <span>{{ gw.nodeCount || 0 }} nodes</span>
             </div>
           </router-link>
-          <button class="btn btn-danger btn-sm gw-mobile-del" @click="remove(gw.id)">Delete</button>
+          <button class="btn btn-danger btn-sm gw-mobile-del" @click="remove(gw)">Delete</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirmation modal -->
+  <div v-if="deleteTarget" class="modal-overlay" @click.self="deleteTarget = null">
+    <div class="modal">
+      <h4>Delete Gateway</h4>
+      <p>Delete gateway <strong>{{ deleteTargetName }}</strong>?</p>
+      <p class="modal-note">This will permanently remove the gateway and all its nodes. This cannot be undone.</p>
+      <div class="modal-actions">
+        <button @click="deleteTarget = null" class="btn btn-secondary" :disabled="deleting">Cancel</button>
+        <button @click="doDelete" class="btn btn-danger" :disabled="deleting">{{ deleting ? 'Deleting…' : 'Delete' }}</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useGatewayStore } from '../stores/gateways'
 
 const store = useGatewayStore()
 const loading = computed(() => store.loading)
+const deleteTarget = ref(null)
+const deleteTargetName = ref('')
+const deleting = ref(false)
 
-function remove(id) {
-  if (confirm('Delete this gateway? This cannot be undone.')) {
-    store.remove(id)
+function remove(gw) {
+  deleteTargetName.value = gw.name
+  deleteTarget.value = gw.id
+}
+
+async function doDelete() {
+  deleting.value = true
+  try {
+    await store.remove(deleteTarget.value)
+    deleteTarget.value = null
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -146,6 +171,49 @@ code {
 
 .gw-cards {
   display: none;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.5rem;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.modal h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.modal p {
+  font-size: 0.85rem;
+  color: #1f2328;
+  margin-bottom: 0.5rem;
+}
+
+.modal-note {
+  color: #656d76 !important;
+  font-size: 0.8rem !important;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 
 @media (max-width: 640px) {

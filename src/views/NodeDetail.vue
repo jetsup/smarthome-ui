@@ -12,7 +12,7 @@
     <template v-else>
       <div class="node-header">
         <div>
-          <h3 class="node-title">Node {{ node.nodeId }}</h3>
+          <h3 class="node-title">{{ node.name || 'Node ' + node.nodeId }}</h3>
           <p class="node-meta">
             Device ID: <code>{{ node.deviceId }}</code> |
             Gateway: <code>{{ node.gatewayId }}</code> |
@@ -31,7 +31,7 @@
           <span class="stat-label">Current Value</span>
         </div>
         <div class="stat-card">
-          <span class="stat-value">{{ capabilities }}</span>
+          <span class="stat-value">{{ capsSummary }}</span>
           <span class="stat-label">Capabilities</span>
         </div>
         <div class="stat-card">
@@ -40,26 +40,42 @@
         </div>
       </div>
 
-      <!-- Controls -->
-      <div class="card section">
-        <h4>Control</h4>
-        <p class="control-desc">Send a command value to this node.</p>
-        <div class="control-form">
-          <div class="input-group">
-            <label for="cmd-value">Value</label>
-            <input id="cmd-value" type="number" v-model.number="cmdValue" min="0" max="65535" placeholder="0–65535" />
-          </div>
-          <button class="btn btn-primary" @click="sendCommand" :disabled="sending">
-            {{ sending ? 'Sending…' : 'Send Command' }}
-          </button>
+      <!-- Per-capability controls -->
+      <div v-if="caps.length > 0" class="card section">
+        <div class="section-header">
+          <h4>Capabilities</h4>
+          <button class="btn btn-secondary btn-sm" @click="openEditCaps">Edit</button>
         </div>
-        <p v-if="cmdResult" :class="['cmd-result', cmdResult.status === 'transmitted' ? 'success' : 'error']">
-          {{ cmdResult.message }}
-        </p>
+        <div class="cap-list">
+          <div v-for="(cap, i) in caps" :key="i" class="cap-item">
+            <div class="cap-info">
+              <span class="cap-label">{{ cap.label || capTypeLabel(cap.type) }}</span>
+              <span class="cap-type">{{ capTypeLabel(cap.type) }} (pin {{ cap.pin }})</span>
+            </div>
+            <div class="cap-control">
+              <button v-if="cap.type === 'digitalOutput' || cap.type === 'relay'"
+                :class="['btn', capStates[i] ? 'btn-success' : 'btn-secondary']"
+                @click="toggleCap(i, cap)" :disabled="sending">
+                {{ capStates[i] ? 'ON' : 'OFF' }}
+              </button>
+              <div v-else-if="cap.type === 'analogOutput'" class="analog-slider-wrap">
+                <input type="range" min="0" max="255" :value="analogVals[i] ?? 0" @input="analogDrag(i, $event)" @change="analogCommit(i)" class="analog-slider" />
+                <span class="analog-val">{{ analogVals[i] ?? 0 }}</span>
+              </div>
+              <span v-else-if="cap.type === 'analogInput'" class="cap-value">
+                {{ node.value ?? '—' }}
+              </span>
+              <span v-else-if="cap.type === 'digitalInput'" class="cap-value">
+                {{ node.value ? 'HIGH' : 'LOW' }}
+              </span>
+              <span v-else class="cap-value">—</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Quick toggles for relay type -->
-      <div v-if="node.deviceType === 3" class="card section">
+      <!-- Quick toggles for old relay type (backward compat) -->
+      <div v-if="!node.capabilitiesConfig && node.deviceType === 3" class="card section">
         <h4>Relay Control</h4>
         <div class="quick-actions">
           <button class="btn btn-success" @click="quickCommand(1)" :disabled="sending">Turn On</button>
@@ -73,6 +89,43 @@
         <code class="api-key-value">{{ node.apiKey || '—' }}</code>
       </div>
     </template>
+
+    <!-- Edit Capabilities modal -->
+    <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
+      <div class="modal modal-wide">
+        <h4>Edit Capabilities</h4>
+        <p>Configure capabilities for device <code>{{ node?.deviceId }}</code>.</p>
+
+        <div class="prov-form">
+          <div class="form-group">
+            <label>Capabilities</label>
+            <div v-for="(cap, i) in editCaps" :key="i" class="cap-row">
+              <select v-model="cap.type" class="cap-type-select">
+                <option value="digitalOutput">Digital Output</option>
+                <option value="analogOutput">Analog Output</option>
+                <option value="analogInput">Analog Input</option>
+                <option value="digitalInput">Digital Input</option>
+                <option value="relay">Relay</option>
+                <option value="i2c">I2C</option>
+                <option value="uart">UART</option>
+              </select>
+              <input v-if="cap.type !== 'i2c' && cap.type !== 'uart'" v-model.number="cap.pin" type="number" class="cap-pin" placeholder="Pin" />
+              <input v-if="cap.type === 'i2c'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="Addr (hex)" />
+              <input v-if="cap.type === 'uart'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="UART #" />
+              <input v-model="cap.label" class="cap-label" placeholder="Label" />
+              <button @click="editCaps.splice(i, 1)" class="btn btn-danger btn-sm">&times;</button>
+            </div>
+            <button @click="addEditCap" class="btn btn-secondary btn-sm">+ Add Capability</button>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button @click="showEditModal = false" class="btn btn-secondary" :disabled="saving">Cancel</button>
+          <button @click="saveCaps" class="btn btn-primary" :disabled="saving">{{ saving ? 'Saving…' : 'Save' }}</button>
+        </div>
+        <p v-if="capsError" class="modal-error">{{ capsError }}</p>
+      </div>
+    </div>
 
     <!-- Toasts -->
     <div class="toast-container">
@@ -94,10 +147,17 @@ const node = ref(null)
 const initialLoading = ref(true)
 const cmdValue = ref(0)
 const sending = ref(false)
-const cmdResult = ref(null)
 const toasts = ref([])
 
+const capStates = ref({})
+const analogVals = ref({})
 let pollTimer = null
+
+// Edit capabilities modal
+const showEditModal = ref(false)
+const editCaps = ref([])
+const saving = ref(false)
+const capsError = ref('')
 
 const typeLabels = {
   0: 'Unknown',
@@ -108,6 +168,22 @@ const typeLabels = {
   5: 'Hybrid',
 }
 
+const capLabels = {
+  'analogInput': 'Analog In',
+  'analogOutput': 'Analog Out',
+  'digitalInput': 'Digital In',
+  'digitalOutput': 'Digital Out',
+  'relay': 'Relay',
+  'irTx': 'IR TX',
+  'irRx': 'IR RX',
+  'i2c': 'I2C',
+  'uart': 'UART',
+}
+
+function capTypeLabel(type) {
+  return capLabels[type] || type
+}
+
 const typeLabel = computed(() => typeLabels[node.value?.deviceType] || 'Unknown')
 
 const backLink = computed(() => {
@@ -115,15 +191,26 @@ const backLink = computed(() => {
   return gid ? '/gateways/' + gid : '/gateways'
 })
 
-const capabilities = computed(() => {
-  const caps = node.value?.capabilities
-  if (!caps) return 'None'
+const caps = computed(() => {
+  const cc = node.value?.capabilitiesConfig
+  if (Array.isArray(cc) && cc.length > 0) return cc
+  return []
+})
+
+const capsSummary = computed(() => {
+  const cc = node.value?.capabilitiesConfig
+  if (Array.isArray(cc) && cc.length > 0) {
+    return cc.map(c => capTypeLabel(c.type)).join(', ')
+  }
+  // Fallback to bitmask
+  const capsBits = node.value?.capabilities
+  if (!capsBits) return 'None'
   const labels = []
-  if (caps & 1) labels.push('Analog In')
-  if (caps & 2) labels.push('Digital In')
-  if (caps & 4) labels.push('Relay Out')
-  if (caps & 8) labels.push('IR TX')
-  if (caps & 16) labels.push('IR RX')
+  if (capsBits & 1) labels.push('Analog In')
+  if (capsBits & 2) labels.push('Digital In')
+  if (capsBits & 4) labels.push('Relay Out')
+  if (capsBits & 8) labels.push('IR TX')
+  if (capsBits & 16) labels.push('IR RX')
   return labels.join(', ') || 'None'
 })
 
@@ -151,24 +238,97 @@ function addToast(message, type = 'success') {
   setTimeout(() => toasts.value.shift(), 4000)
 }
 
-async function sendCommand() {
+async function sendCommand(pin) {
   sending.value = true
-  cmdResult.value = null
   try {
-    const { data } = await api.post(`/nodes/${route.params.nodeId}/command`, { value: cmdValue.value })
-    cmdResult.value = { status: 'transmitted', message: `Command value ${data.value} sent successfully` }
+    const payload = { value: cmdValue.value }
+    if (pin !== undefined) payload.pin = pin
+    const { data } = await api.post(`/nodes/${route.params.nodeId}/command`, payload)
+    if (node.value) node.value.value = cmdValue.value
     addToast(`Command ${data.value} sent`)
   } catch (e) {
-    cmdResult.value = { status: 'error', message: e.response?.data?.error || 'Failed to send command' }
     addToast('Command failed', 'error')
   } finally {
     sending.value = false
   }
 }
 
+async function toggleCap(index, cap) {
+  capStates.value[index] = !capStates.value[index]
+  cmdValue.value = capStates.value[index] ? 1 : 0
+  await sendCommand(cap.pin)
+}
+
+function analogDrag(index, event) {
+  analogVals.value[index] = Number(event.target.value)
+}
+
+function analogCommit(index) {
+  const cc = node.value?.capabilitiesConfig
+  if (!Array.isArray(cc) || !cc[index]) return
+  cmdValue.value = analogVals.value[index] ?? 0
+  sendCommand(cc[index].pin)
+}
+
+function initCapStates() {
+  const cc = node.value?.capabilitiesConfig
+  if (Array.isArray(cc) && cc.length > 0) {
+    const states = {}
+    const avals = {}
+    cc.forEach((c, i) => {
+      if (c.type === 'digitalOutput' || c.type === 'relay') {
+        states[i] = c.value ? c.value > 0 : false
+      }
+      if (c.type === 'analogOutput') {
+        avals[i] = c.value ?? 0
+      }
+    })
+    capStates.value = states
+    analogVals.value = avals
+  }
+}
+
 async function quickCommand(val) {
   cmdValue.value = val
   await sendCommand()
+}
+
+function defaultPinForType(type) {
+  const pins = { digitalOutput: 2, analogOutput: 26, analogInput: 34, digitalInput: 35, relay: 32, i2c: 0, uart: 0 }
+  return pins[type] ?? 0
+}
+
+function addEditCap() {
+  editCaps.value.push({ type: 'digitalOutput', pin: 2, extra: 0, label: '' })
+}
+
+function openEditCaps() {
+  const cc = node.value?.capabilitiesConfig
+  editCaps.value = Array.isArray(cc) ? cc.map(c => ({ ...c })) : []
+  capsError.value = ''
+  showEditModal.value = true
+}
+
+async function saveCaps() {
+  saving.value = true
+  capsError.value = ''
+  try {
+    const caps = editCaps.value.map(c => ({
+      type: c.type,
+      pin: c.type !== 'i2c' && c.type !== 'uart' ? (Number(c.pin) || 0) : 0,
+      extra: ['i2c', 'uart'].includes(c.type) ? (Number(c.extra) || 0) : 0,
+      label: c.label || '',
+    }))
+    await api.put(`/nodes/${route.params.nodeId}/capabilities`, { capabilitiesConfig: caps })
+    await fetchNode()
+    addToast('Capabilities updated')
+    showEditModal.value = false
+  } catch (e) {
+    capsError.value = e.response?.data?.error || 'Failed to update capabilities'
+    addToast('Update failed', 'error')
+  } finally {
+    saving.value = false
+  }
 }
 
 async function fetchNode() {
@@ -179,6 +339,7 @@ async function fetchNode() {
     } else {
       node.value = data
     }
+    initCapStates()
   } catch {
     node.value = null
   }
@@ -275,6 +436,13 @@ onUnmounted(() => {
   margin-bottom: 0.5rem;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
 .control-desc {
   color: #656d76;
   font-size: 0.82rem;
@@ -343,6 +511,45 @@ onUnmounted(() => {
   background: #2ea043;
 }
 
+.cap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cap-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+}
+
+.cap-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.cap-type {
+  display: block;
+  font-size: 0.75rem;
+  color: #656d76;
+}
+
+.cap-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cap-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2328;
+}
+
 .api-key-section {
   background: #f6f8fa;
 }
@@ -400,6 +607,146 @@ onUnmounted(() => {
 @keyframes slide-in {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
+}
+
+/* Analog slider */
+.analog-slider-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 140px;
+}
+
+.analog-slider {
+  flex: 1;
+  accent-color: #0969da;
+  cursor: pointer;
+}
+
+.analog-val {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1f2328;
+  min-width: 2rem;
+  text-align: right;
+}
+
+/* Modal styles matching GatewayDetail */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.5rem;
+  width: 400px;
+  max-width: 90vw;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.modal-wide {
+  width: 560px;
+}
+
+.modal h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.modal p {
+  font-size: 0.85rem;
+  color: #1f2328;
+  margin-bottom: 0.5rem;
+}
+
+.modal code {
+  background: #f3f4f6;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.modal-note {
+  color: #656d76 !important;
+  font-size: 0.8rem !important;
+}
+
+.modal-error {
+  color: #cf222e !important;
+  font-size: 0.8rem !important;
+  margin-top: 0.75rem !important;
+  padding: 0.5rem;
+  background: #ffebe9;
+  border-radius: 6px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.prov-form .form-group {
+  margin-bottom: 1rem;
+}
+
+.prov-form label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: #1f2328;
+}
+
+.prov-form input,
+.prov-form select {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+}
+
+.cap-row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.cap-type-select {
+  flex: 2;
+  min-width: 0;
+}
+
+.cap-pin {
+  flex: 1;
+  min-width: 0;
+}
+
+.cap-label {
+  flex: 2;
+  min-width: 0;
+}
+
+.cap-row .btn-sm {
+  flex-shrink: 0;
+}
+
+.btn-sm {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
+  width: auto;
 }
 
 @media (max-width: 640px) {

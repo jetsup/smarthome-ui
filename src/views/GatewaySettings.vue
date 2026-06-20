@@ -7,10 +7,10 @@
     <template v-else-if="gw">
       <h3 class="page-title">{{ gw.name }} — Settings</h3>
 
-      <!-- WiFi -->
+      <!-- WiFi: Add new network -->
       <div class="card section">
         <div class="section-header">
-          <h4>WiFi Network</h4>
+          <h4>Add WiFi Network</h4>
         </div>
         <div v-if="wifiSaved" class="wifi-success">WiFi settings saved and sent to gateway.</div>
         <div v-if="wifiError" class="wifi-error">{{ wifiError }}</div>
@@ -29,12 +29,21 @@
         </form>
       </div>
 
-      <!-- Future settings placeholder -->
+      <!-- WiFi: Saved networks -->
       <div class="card section">
         <div class="section-header">
-          <h4>More Settings</h4>
+          <h4>Saved Networks</h4>
         </div>
-        <p class="placeholder-text">Additional configuration options will be added here.</p>
+        <div v-if="credentials.length === 0" class="placeholder-text">No saved networks.</div>
+        <div v-else class="cred-list">
+          <div v-for="cred in credentials" :key="cred.id" class="cred-row">
+            <div class="cred-info">
+              <strong class="cred-ssid">{{ cred.ssid }}</strong>
+              <span class="cred-pass">{{ cred.password ? cred.password[0] + '••••••' : '(open)' }}</span>
+            </div>
+            <button class="btn btn-danger btn-sm" @click="deleteCred(cred.id)">Delete</button>
+          </div>
+        </div>
       </div>
     </template>
   </div>
@@ -56,11 +65,22 @@ const wifiPass = ref('')
 const wifiSaving = ref(false)
 const wifiSaved = ref(false)
 const wifiError = ref('')
+const credentials = ref([])
 
 onMounted(async () => {
   await store.fetchOne(route.params.id)
   loading.value = false
+  await fetchCredentials()
 })
+
+async function fetchCredentials() {
+  try {
+    const { data } = await api.get(`/gateways/${route.params.id}/wifi`)
+    credentials.value = Array.isArray(data) ? data : []
+  } catch {
+    // ignore
+  }
+}
 
 async function saveWifi() {
   wifiSaving.value = true
@@ -74,10 +94,20 @@ async function saveWifi() {
     wifiSaved.value = true
     wifiSsid.value = ''
     wifiPass.value = ''
+    await fetchCredentials()
   } catch (e) {
     wifiError.value = 'Failed to save: ' + (e.response?.data?.error || e.message)
   } finally {
     wifiSaving.value = false
+  }
+}
+
+async function deleteCred(credId) {
+  try {
+    await api.delete(`/gateways/${route.params.id}/wifi/${credId}`)
+    await fetchCredentials()
+  } catch (e) {
+    wifiError.value = 'Failed to delete: ' + (e.response?.data?.error || e.message)
   }
 }
 </script>
@@ -165,5 +195,36 @@ async function saveWifi() {
   padding: 2rem;
   text-align: center;
   color: #656d76;
+}
+.cred-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.cred-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+}
+.cred-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.cred-ssid {
+  font-size: 0.85rem;
+  color: #1f2328;
+}
+.cred-pass {
+  font-size: 0.72rem;
+  color: #656d76;
+}
+.btn-sm {
+  padding: 0.3rem 0.75rem;
+  font-size: 0.8rem;
 }
 </style>
