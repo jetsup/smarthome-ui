@@ -101,6 +101,69 @@
           No nodes linked yet. Scan for nearby devices.
         </div>
       </div>
+
+      <!-- Capability Bindings card -->
+      <div class="card section">
+        <div class="section-header">
+          <h4>Capability Bindings</h4>
+          <button @click="showAddBinding = true" class="btn btn-primary btn-sm">+ Add Binding</button>
+        </div>
+        <div v-if="bindings.length === 0" class="state-msg" style="padding:1rem">
+          No bindings configured. Bindings forward input changes to output capabilities.
+        </div>
+        <table v-else class="node-table">
+          <thead>
+            <tr>
+              <th>Source (Input)</th>
+              <th>Target (Output)</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="b in bindings" :key="b.id">
+              <td><code>{{ b.sourceDeviceId }}</code> pin {{ b.sourcePin }}</td>
+              <td><code>{{ b.targetDeviceId }}</code> pin {{ b.targetPin }}</td>
+              <td><button @click="deleteBinding(b.id)" class="btn btn-danger btn-sm">Delete</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Add Binding modal -->
+      <div v-if="showAddBinding" class="modal-overlay" @click.self="showAddBinding = false">
+        <div class="modal">
+          <h4>Add Capability Binding</h4>
+          <p>When the source input changes, the target output is updated automatically.</p>
+          <div class="prov-form">
+            <div class="form-group">
+              <label for="source-node">Source Node (input)</label>
+              <select id="source-node" v-model.number="newBinding.sourceDeviceId" class="cap-type-select">
+                <option :value="0" disabled>Select source node…</option>
+                <option v-for="n in nodes" :key="n.deviceId" :value="n.deviceId">{{ n.name || 'Device ' + n.deviceId }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="source-pin">Source Pin (GPIO)</label>
+              <input id="source-pin" v-model.number="newBinding.sourcePin" type="number" class="cap-pin" placeholder="e.g. 34" />
+            </div>
+            <div class="form-group">
+              <label for="target-node">Target Node (output)</label>
+              <select id="target-node" v-model.number="newBinding.targetDeviceId" class="cap-type-select">
+                <option :value="0" disabled>Select target node…</option>
+                <option v-for="n in nodes" :key="n.deviceId" :value="n.deviceId">{{ n.name || 'Device ' + n.deviceId }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="target-pin">Target Pin (GPIO)</label>
+              <input id="target-pin" v-model.number="newBinding.targetPin" type="number" class="cap-pin" placeholder="e.g. 32" />
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button @click="showAddBinding = false" class="btn btn-secondary">Cancel</button>
+            <button @click="doAddBinding" class="btn btn-primary" :disabled="!newBinding.sourceDeviceId || !newBinding.targetDeviceId || newBinding.sourcePin === 0 || newBinding.targetPin === 0">Add Binding</button>
+          </div>
+        </div>
+      </div>
     </template>
 
     <!-- Link / Provision modal -->
@@ -203,6 +266,11 @@ const disconnecting = ref(false)
 
 // Toasts
 const toasts = ref([])
+
+// Bindings
+const bindings = ref([])
+const showAddBinding = ref(false)
+const newBinding = ref({ sourceDeviceId: 0, sourcePin: 0, targetDeviceId: 0, targetPin: 0 })
 
 // Track gateway online state changes for notifications
 const prevOnline = ref(null)
@@ -338,6 +406,44 @@ async function fetchDiscovered() {
   }
 }
 
+async function fetchBindings() {
+  try {
+    const { data } = await api.get(`/gateways/${route.params.id}/bindings`)
+    bindings.value = Array.isArray(data) ? data : []
+  } catch {
+    // ignore
+  }
+}
+
+async function doAddBinding() {
+  const nb = newBinding.value
+  if (!nb.sourceDeviceId || !nb.targetDeviceId || !nb.sourcePin || !nb.targetPin) return
+  try {
+    await api.post(`/gateways/${route.params.id}/bindings`, {
+      sourceDeviceId: nb.sourceDeviceId,
+      sourcePin: nb.sourcePin,
+      targetDeviceId: nb.targetDeviceId,
+      targetPin: nb.targetPin,
+    })
+    addToast('Binding created')
+    showAddBinding.value = false
+    newBinding.value = { sourceDeviceId: 0, sourcePin: 0, targetDeviceId: 0, targetPin: 0 }
+    await fetchBindings()
+  } catch (e) {
+    addToast('Failed to create binding: ' + (e.response?.data?.error || e.message), 'error')
+  }
+}
+
+async function deleteBinding(id) {
+  try {
+    await api.delete(`/bindings/${id}`)
+    addToast('Binding deleted')
+    await fetchBindings()
+  } catch (e) {
+    addToast('Failed to delete binding: ' + (e.response?.data?.error || e.message), 'error')
+  }
+}
+
 async function scanAndRefresh() {
   scanning.value = true
   try {
@@ -420,12 +526,13 @@ async function doDisconnect() {
 
 function startPolling() {
   pollTimer = setInterval(async () => {
-    await Promise.all([fetchGateway(), fetchNodes(), fetchDiscovered()])
+    await Promise.all([fetchGateway(), fetchNodes(), fetchDiscovered(), fetchBindings()])
   }, 5000)
 }
 
 onMounted(() => {
   fetchData()
+  fetchBindings()
   startPolling()
 })
 
