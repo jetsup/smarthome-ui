@@ -50,7 +50,7 @@
       </div>
 
       <!-- Combined nodes table -->
-      <div class="card section">
+      <div class="card section" style="margin-bottom:1rem">
         <div class="section-header">
           <h4>Nodes</h4>
           <button @click="scanAndRefresh" class="btn btn-secondary btn-sm" :disabled="scanning">
@@ -106,7 +106,7 @@
       <div class="card section">
         <div class="section-header">
           <h4>Capability Bindings</h4>
-          <button @click="showAddBinding = true" class="btn btn-primary btn-sm">+ Add Binding</button>
+          <button @click="openAddBinding" class="btn btn-primary btn-sm">+ Add Binding</button>
         </div>
         <div v-if="bindings.length === 0" class="state-msg" style="padding:1rem">
           No bindings configured. Bindings forward input changes to output capabilities.
@@ -143,8 +143,13 @@
               </select>
             </div>
             <div class="form-group">
-              <label for="source-pin">Source Pin (GPIO)</label>
-              <input id="source-pin" v-model.number="newBinding.sourcePin" type="number" class="cap-pin" placeholder="e.g. 34" />
+              <label for="source-cap">Source Capability (input)</label>
+              <select id="source-cap" v-model.number="newBinding.sourcePin" class="cap-type-select">
+                <option :value="0" disabled>Select input capability…</option>
+                <option v-for="cap in sourceCapsList" :key="cap.pin" :value="cap.pin">
+                  {{ cap.label || capTypeLabel(cap.type) }} (pin {{ cap.pin }})
+                </option>
+              </select>
             </div>
             <div class="form-group">
               <label for="target-node">Target Node (output)</label>
@@ -154,8 +159,13 @@
               </select>
             </div>
             <div class="form-group">
-              <label for="target-pin">Target Pin (GPIO)</label>
-              <input id="target-pin" v-model.number="newBinding.targetPin" type="number" class="cap-pin" placeholder="e.g. 32" />
+              <label for="target-cap">Target Capability (output)</label>
+              <select id="target-cap" v-model.number="newBinding.targetPin" class="cap-type-select">
+                <option :value="0" disabled>Select output capability…</option>
+                <option v-for="cap in targetCapsList" :key="cap.pin" :value="cap.pin">
+                  {{ cap.label || capTypeLabel(cap.type) }} (pin {{ cap.pin }})
+                </option>
+              </select>
             </div>
           </div>
           <div class="modal-actions">
@@ -180,6 +190,7 @@
 
           <div class="form-group">
             <label>Capabilities</label>
+            <a href="https://lastminuteengineers.com/esp32-pinout-reference" target="_blank" class="pin-ref-link">ESP32 Pinout Reference</a>
             <div v-for="(cap, i) in provCaps" :key="i" class="cap-row">
               <select v-model="cap.type" class="cap-type-select">
                 <option value="digitalOutput">Digital Output</option>
@@ -190,7 +201,12 @@
                 <option value="i2c">I2C</option>
                 <option value="uart">UART</option>
               </select>
-              <input v-if="cap.type !== 'i2c' && cap.type !== 'uart'" v-model.number="cap.pin" type="number" class="cap-pin" placeholder="Pin" />
+              <select v-if="cap.type !== 'i2c' && cap.type !== 'uart'" v-model.number="cap.pin" class="cap-pin" :class="{ 'cap-pin-err': usedPins(i).has(Number(cap.pin)) }">
+                <option v-for="p in PIN_OPTIONS" :key="p" :value="p" :disabled="p !== 0 && usedPins(i).has(p)">
+                  {{ pinLabel(p, cap.type) }}
+                </option>
+              </select>
+              <span v-if="usedPins(i).has(Number(cap.pin))" class="pin-err-msg">Pin already used by another capability</span>
               <input v-if="cap.type === 'i2c'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="Addr (hex)" />
               <input v-if="cap.type === 'uart'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="UART #" />
               <input v-model="cap.label" class="cap-label" placeholder="Label" />
@@ -231,7 +247,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGatewayStore } from '../stores/gateways'
 import api from '../services/api'
@@ -271,6 +287,62 @@ const toasts = ref([])
 const bindings = ref([])
 const showAddBinding = ref(false)
 const newBinding = ref({ sourceDeviceId: 0, sourcePin: 0, targetDeviceId: 0, targetPin: 0 })
+
+const capLabels = {
+  'analogInput': 'Analog In',
+  'analogOutput': 'Analog Out',
+  'digitalInput': 'Digital In',
+  'digitalOutput': 'Digital Out',
+  'relay': 'Relay',
+  'irTx': 'IR TX',
+  'irRx': 'IR RX',
+  'i2c': 'I2C',
+  'uart': 'UART',
+}
+
+function capTypeLabel(type) {
+  return capLabels[type] || type
+}
+
+function parseCapConfig(cfg) {
+  if (!cfg) return []
+  if (typeof cfg === 'string') {
+    try { return JSON.parse(cfg) } catch { return [] }
+  }
+  if (Array.isArray(cfg)) return cfg
+  return []
+}
+
+const inputCapTypes = ['digitalInput', 'analogInput']
+const outputCapTypes = ['digitalOutput', 'analogOutput', 'relay']
+
+const sourceCapsList = computed(() => {
+  const node = nodes.value.find(n => n.deviceId === newBinding.value.sourceDeviceId)
+  if (!node) return []
+  return parseCapConfig(node.capabilitiesConfig).filter(c => inputCapTypes.includes(c.type))
+})
+
+const sourceCapType = computed(() => {
+  const cap = sourceCapsList.value.find(c => c.pin === newBinding.value.sourcePin)
+  return cap ? cap.type : ''
+})
+
+const targetCapsList = computed(() => {
+  if (!newBinding.value.sourcePin) return []
+  const node = nodes.value.find(n => n.deviceId === newBinding.value.targetDeviceId)
+  if (!node) return []
+  const allowed = sourceCapType.value === 'analogInput' ? ['analogOutput'] : ['digitalOutput', 'relay']
+  return parseCapConfig(node.capabilitiesConfig).filter(c => allowed.includes(c.type))
+})
+
+watch(() => newBinding.value.sourceDeviceId, () => {
+  newBinding.value.sourcePin = 0
+  newBinding.value.targetPin = 0
+})
+
+watch(() => newBinding.value.targetDeviceId, () => {
+  newBinding.value.targetPin = 0
+})
 
 // Track gateway online state changes for notifications
 const prevOnline = ref(null)
@@ -418,6 +490,18 @@ async function fetchBindings() {
 async function doAddBinding() {
   const nb = newBinding.value
   if (!nb.sourceDeviceId || !nb.targetDeviceId || !nb.sourcePin || !nb.targetPin) return
+
+  const dup = bindings.value.find(b =>
+    b.sourceDeviceId === nb.sourceDeviceId &&
+    b.sourcePin === nb.sourcePin &&
+    b.targetDeviceId === nb.targetDeviceId &&
+    b.targetPin === nb.targetPin
+  )
+  if (dup) {
+    addToast('This binding already exists', 'error')
+    return
+  }
+
   try {
     await api.post(`/gateways/${route.params.id}/bindings`, {
       sourceDeviceId: nb.sourceDeviceId,
@@ -432,6 +516,11 @@ async function doAddBinding() {
   } catch (e) {
     addToast('Failed to create binding: ' + (e.response?.data?.error || e.message), 'error')
   }
+}
+
+function openAddBinding() {
+  newBinding.value = { sourceDeviceId: 0, sourcePin: 0, targetDeviceId: 0, targetPin: 0 }
+  showAddBinding.value = true
 }
 
 async function deleteBinding(id) {
@@ -456,6 +545,30 @@ async function scanAndRefresh() {
   } finally {
     scanning.value = false
   }
+}
+
+const PIN_OPTIONS = [0,2,4,5,12,13,14,15,16,17,18,19,21,22,23,25,26,27,32,33,34,35,36,39]
+const ESP32_ADC2 = new Set([0,2,4,12,13,14,15,25,26,27])
+const ESP32_INPUT_ONLY = new Set([34,35,36,39])
+
+function pinLabel(pin, type) {
+  if (pin === 0) return '— Select pin —'
+  const hints = []
+  if (ESP32_ADC2.has(pin) && (type === 'analogInput' || type === 'analogOutput')) hints.push('ADC2, conflicts with Wi-Fi')
+  if (ESP32_INPUT_ONLY.has(pin) && (type === 'digitalOutput' || type === 'analogOutput' || type === 'relay')) hints.push('input only')
+  let label = `GPIO ${pin}`
+  if (hints.length) label += ` (${hints.join(', ')})`
+  return label
+}
+
+function usedPins(excludeIndex) {
+  const pins = new Set()
+  provCaps.value.forEach((cap, i) => {
+    if (i !== excludeIndex && cap.pin && cap.type !== 'i2c' && cap.type !== 'uart') {
+      pins.add(Number(cap.pin))
+    }
+  })
+  return pins
 }
 
 function defaultPinForType(type) {
@@ -783,6 +896,26 @@ onUnmounted(() => {
 
 .cap-row .btn-sm {
   flex-shrink: 0;
+}
+
+.cap-pin-err {
+  border-color: #e63946 !important;
+  background: #fff0f0;
+}
+
+.pin-err-msg {
+  display: block;
+  font-size: 0.72rem;
+  color: #e63946;
+  margin-top: 0.1rem;
+  flex-basis: 100%;
+}
+
+.pin-ref-link {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: #0969da;
+  margin-bottom: 0.4rem;
 }
 
 .modal h4 {

@@ -15,6 +15,10 @@
           <span class="nav-icon">&#9776;</span>
           Gateways
         </router-link>
+        <router-link to="/pending-actions" class="nav-item" active-class="active" @click="sidebarOpen = false">
+          <span class="nav-icon">&#9881;</span>
+          Pending Actions
+        </router-link>
       </nav>
 
       <div class="sidebar-footer">

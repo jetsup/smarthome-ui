@@ -99,6 +99,7 @@
         <div class="prov-form">
           <div class="form-group">
             <label>Capabilities</label>
+            <a href="https://lastminuteengineers.com/esp32-pinout-reference" target="_blank" class="pin-ref-link">ESP32 Pinout Reference</a>
             <div v-for="(cap, i) in editCaps" :key="i" class="cap-row">
               <select v-model="cap.type" class="cap-type-select">
                 <option value="digitalOutput">Digital Output</option>
@@ -109,7 +110,12 @@
                 <option value="i2c">I2C</option>
                 <option value="uart">UART</option>
               </select>
-              <input v-if="cap.type !== 'i2c' && cap.type !== 'uart'" v-model.number="cap.pin" type="number" class="cap-pin" placeholder="Pin" />
+              <select v-if="cap.type !== 'i2c' && cap.type !== 'uart'" v-model.number="cap.pin" class="cap-pin" :class="{ 'cap-pin-err': usedPins(i).has(Number(cap.pin)) }">
+                <option v-for="p in PIN_OPTIONS" :key="p" :value="p" :disabled="p !== 0 && usedPins(i).has(p)">
+                  {{ pinLabel(p, cap.type) }}
+                </option>
+              </select>
+              <span v-if="usedPins(i).has(Number(cap.pin))" class="pin-err-msg">Pin already used by another capability</span>
               <input v-if="cap.type === 'i2c'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="Addr (hex)" />
               <input v-if="cap.type === 'uart'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="UART #" />
               <input v-model="cap.label" class="cap-label" placeholder="Label" />
@@ -291,6 +297,30 @@ function initCapStates() {
 async function quickCommand(val) {
   cmdValue.value = val
   await sendCommand()
+}
+
+const PIN_OPTIONS = [0,2,4,5,12,13,14,15,16,17,18,19,21,22,23,25,26,27,32,33,34,35,36,39]
+const ESP32_ADC2 = new Set([0,2,4,12,13,14,15,25,26,27])
+const ESP32_INPUT_ONLY = new Set([34,35,36,39])
+
+function pinLabel(pin, type) {
+  if (pin === 0) return '— Select pin —'
+  const hints = []
+  if (ESP32_ADC2.has(pin) && (type === 'analogInput' || type === 'analogOutput')) hints.push('ADC2, conflicts with Wi-Fi')
+  if (ESP32_INPUT_ONLY.has(pin) && (type === 'digitalOutput' || type === 'analogOutput' || type === 'relay')) hints.push('input only')
+  let label = `GPIO ${pin}`
+  if (hints.length) label += ` (${hints.join(', ')})`
+  return label
+}
+
+function usedPins(excludeIndex) {
+  const pins = new Set()
+  editCaps.value.forEach((cap, i) => {
+    if (i !== excludeIndex && cap.pin && cap.type !== 'i2c' && cap.type !== 'uart') {
+      pins.add(Number(cap.pin))
+    }
+  })
+  return pins
 }
 
 function defaultPinForType(type) {
@@ -741,6 +771,26 @@ onUnmounted(() => {
 
 .cap-row .btn-sm {
   flex-shrink: 0;
+}
+
+.cap-pin-err {
+  border-color: #e63946 !important;
+  background: #fff0f0;
+}
+
+.pin-err-msg {
+  display: block;
+  font-size: 0.72rem;
+  color: #e63946;
+  margin-top: 0.1rem;
+  flex-basis: 100%;
+}
+
+.pin-ref-link {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: #0969da;
+  margin-bottom: 0.4rem;
 }
 
 .btn-sm {

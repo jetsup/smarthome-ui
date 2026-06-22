@@ -52,6 +52,12 @@ const routes = [
         meta: { title: 'Gateway Settings' },
       },
       {
+        path: 'pending-actions',
+        name: 'PendingActions',
+        component: () => import('../views/PendingActions.vue'),
+        meta: { title: 'Pending Actions' },
+      },
+      {
         path: 'nodes/discover',
         name: 'NodeDiscovery',
         component: () => import('../views/NodeDiscovery.vue'),
