@@ -49,6 +49,14 @@
         <p class="settings-desc">WiFi, device configuration, and more.</p>
       </div>
 
+      <!-- Pairing code card -->
+      <div v-if="pairingCode" class="card section pairing-card">
+        <h4>HMI Pairing Code</h4>
+        <p class="pairing-desc">Enter this code on the HMI to complete pairing:</p>
+        <div class="pairing-code">{{ pairingCode }}</div>
+        <p class="pairing-note">This code will be consumed after successful pairing.</p>
+      </div>
+
       <!-- Combined nodes table -->
       <div class="card section" style="margin-bottom:1rem">
         <div class="section-header">
@@ -343,6 +351,18 @@ watch(() => newBinding.value.sourceDeviceId, () => {
 watch(() => newBinding.value.targetDeviceId, () => {
   newBinding.value.targetPin = 0
 })
+
+// Pairing code
+const pairingCode = ref(null)
+
+async function fetchPairingCode() {
+  try {
+    const { data } = await api.get(`/pair/code/${route.params.id}`)
+    pairingCode.value = data.code || null
+  } catch {
+    // ignore
+  }
+}
 
 // Track gateway online state changes for notifications
 const prevOnline = ref(null)
@@ -639,13 +659,14 @@ async function doDisconnect() {
 
 function startPolling() {
   pollTimer = setInterval(async () => {
-    await Promise.all([fetchGateway(), fetchNodes(), fetchDiscovered(), fetchBindings()])
+    await Promise.all([fetchGateway(), fetchNodes(), fetchDiscovered(), fetchBindings(), fetchPairingCode()])
   }, 5000)
 }
 
 onMounted(() => {
   fetchData()
   fetchBindings()
+  fetchPairingCode()
   startPolling()
 })
 
@@ -1017,6 +1038,35 @@ onUnmounted(() => {
 .settings-desc {
   color: #656d76;
   font-size: 0.8rem;
+}
+
+.pairing-card {
+  border: 2px solid #d4a017;
+  background: #fffbeb;
+  margin-bottom: 1rem;
+}
+.pairing-desc {
+  color: #1f2328;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+.pairing-code {
+  font-family: monospace;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: 8px;
+  text-align: center;
+  color: #b8860b;
+  background: #fff8dc;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px dashed #d4a017;
+}
+.pairing-note {
+  color: #656d76;
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+  text-align: center;
 }
 
 @media (max-width: 640px) {
