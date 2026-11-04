@@ -131,7 +131,7 @@
             <tr v-for="b in bindings" :key="b.id">
               <td><code>{{ b.sourceDeviceId }}</code> pin {{ b.sourcePin }}</td>
               <td><code>{{ b.targetDeviceId }}</code> pin {{ b.targetPin }}</td>
-              <td><button @click="deleteBinding(b.id)" class="btn btn-danger btn-sm">Delete</button></td>
+              <td><button @click="deleteBinding(b.slug)" class="btn btn-danger btn-sm">Delete</button></td>
             </tr>
           </tbody>
         </table>

@@ -412,7 +412,7 @@ async function loadSessions() {
 
 async function revoke(x) {
   if (!(await confirmDialog({ title: 'Sign out this device?', message: `“${x.label}” will be signed out immediately.`, confirmText: 'Sign out', danger: true }))) return
-  try { await api.delete(`/sessions/${x.id}`); await loadSessions() } catch (e) { say(false, err(e, 'Could not sign it out')) }
+  try { await api.delete(`/sessions/${x.slug}`); await loadSessions() } catch (e) { say(false, err(e, 'Could not sign it out')) }
 }
 
 async function revokeOthers() {
@@ -422,7 +422,7 @@ async function revokeOthers() {
 async function removePhone(p) {
   if (!(await confirmDialog({ title: 'Remove this phone?', message: `“${p.name}” will stop receiving sign-in requests.`, confirmText: 'Remove', danger: true }))) return
   try {
-    await api.delete(`/mfa/devices/${p.id}`)
+    await api.delete(`/mfa/devices/${p.slug}`)
     await load()
     say(true, 'Phone removed.')
   } catch (e) {

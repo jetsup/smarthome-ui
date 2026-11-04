@@ -75,7 +75,7 @@ function formatDate(d) {
 
 async function dismiss(a) {
   try {
-    await api.delete(`/pending-actions/${a.id}`)
+    await api.delete(`/pending-actions/${a.slug}`)
     actions.value = actions.value.filter(x => x.id !== a.id)
   } catch (e) {
     notify('Failed to dismiss: ' + (e.response?.data?.error || e.message), 'error')

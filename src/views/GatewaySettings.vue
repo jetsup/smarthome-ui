@@ -178,7 +178,7 @@ async function move(i, delta) {
 async function deleteCred(cred) {
   if (!(await confirmDialog({ title: 'Forget this network?', message: `“${cred.ssid}”`, note: 'The gateway will no longer connect to it.', confirmText: 'Forget', danger: true }))) return
   try {
-    await api.delete(`/gateways/${route.params.id}/wifi/${cred.id}`)
+    await api.delete(`/gateways/${route.params.id}/wifi/${cred.slug}`)
     await fetchCredentials()
   } catch (e) {
     wifiError.value = 'Failed to delete: ' + (e.response?.data?.error || e.message)

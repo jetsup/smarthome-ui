@@ -40,7 +40,7 @@
       <div v-if="loading" class="placeholder-text">Loading…</div>
       <div v-else-if="displays.length === 0" class="placeholder-text">No displays paired yet.</div>
       <div v-else class="list">
-        <router-link v-for="d in displays" :key="d.id" :to="`/displays/${d.id}`" class="row">
+        <router-link v-for="d in displays" :key="d.id" :to="`/displays/${d.slug}`" class="row">
           <div class="row-main">
             <strong class="row-name">{{ d.name }}</strong>
             <span class="row-sub">Gateway: {{ d.gatewayName || '—' }} · {{ d.nodeCount }} node{{ d.nodeCount === 1 ? '' : 's' }} · ID {{ d.deviceId.slice(-4) }}</span>
@@ -98,7 +98,7 @@ async function pair() {
     code.value = ''
     name.value = ''
     await load()
-    router.push(`/displays/${data.hmi.id}`)
+    router.push(`/displays/${data.hmi.slug}`)
   } catch (e) {
     msgOk.value = false
     msg.value = e.response?.data?.error || 'Could not pair the display'
