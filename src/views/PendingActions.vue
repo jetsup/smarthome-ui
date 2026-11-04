@@ -54,6 +54,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import api from '../services/api'
+import { confirmDialog, notify } from '../services/dialog'
 
 const actions = ref([])
 const loading = ref(true)
@@ -77,7 +78,7 @@ async function dismiss(a) {
     await api.delete(`/pending-actions/${a.id}`)
     actions.value = actions.value.filter(x => x.id !== a.id)
   } catch (e) {
-    alert('Failed to dismiss: ' + (e.response?.data?.error || e.message))
+    notify('Failed to dismiss: ' + (e.response?.data?.error || e.message), 'error')
   }
 }
 
@@ -98,106 +99,106 @@ onMounted(fetchActions)
 
 <style scoped>
 .list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.25rem;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:1.25rem;
 }
 
 .section-title {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size:1.05rem;
+  font-weight:700;
 }
 
 .table-wrap {
-  overflow: hidden;
+  overflow:hidden;
 }
 
 .action-table {
-  width: 100%;
-  border-collapse: collapse;
+  width:100%;
+  border-collapse:collapse;
 }
 
 .action-table th {
-  text-align: left;
-  padding: 0.75rem 1rem;
-  background: #f6f8fa;
-  font-size: 0.75rem;
-  color: #656d76;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #d0d7de;
+  text-align:left;
+  padding:0.75rem 1rem;
+  background:var(--c-bg);
+  font-size:0.75rem;
+  color:var(--c-muted);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  border-bottom:1px solid var(--c-border);
 }
 
 .action-table td {
-  padding: 0.75rem 1rem;
-  border-top: 1px solid #f3f4f6;
-  font-size: 0.9rem;
+  padding:0.75rem 1rem;
+  border-top:1px solid var(--c-surface-2);
+  font-size:0.9rem;
 }
 
 .gw-link {
-  color: #0969da;
-  font-weight: 600;
+  color:var(--c-accent);
+  font-weight:600;
 }
 
 .gw-link:hover {
-  text-decoration: underline;
+  text-decoration:underline;
 }
 
 .cell-muted {
-  color: #656d76;
+  color:var(--c-muted);
 }
 
 .state-msg, .empty-state {
-  padding: 2rem;
-  text-align: center;
-  color: #656d76;
+  padding:2rem;
+  text-align:center;
+  color:var(--c-muted);
 }
 
 .empty-state p {
-  margin-bottom: 1rem;
+  margin-bottom:1rem;
 }
 
 .btn-sm {
-  padding: 0.3rem 0.75rem;
-  font-size: 0.8rem;
+  padding:0.3rem 0.75rem;
+  font-size:0.8rem;
 }
 
 .mobile-cards {
-  display: none;
+  display:none;
 }
 
 code {
-  background: #f3f4f6;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  background:var(--c-surface-2);
+  padding:0.15rem 0.4rem;
+  border-radius:4px;
+  font-size:0.8rem;
 }
 
 @media (max-width: 640px) {
-  .action-table { display: none; }
-  .mobile-cards { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; }
+  .action-table { display:none; }
+  .mobile-cards { display:flex; flex-direction:column; gap:0.5rem; padding:0.75rem; }
 
   .mobile-card {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    background: #fafafa;
-    border: 1px solid #e1e4e8;
-    border-radius: 8px;
-    padding: 0.75rem;
+    display:flex;
+    flex-direction:column;
+    gap:0.4rem;
+    background:var(--c-surface-2);
+    border:1px solid var(--c-border);
+    border-radius:8px;
+    padding:0.75rem;
   }
 
   .mobile-card-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.85rem;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:0.85rem;
   }
 
   .mobile-card-row strong {
-    font-size: 0.9rem;
-    color: #0969da;
+    font-size:0.9rem;
+    color:var(--c-accent);
   }
 }
 </style>

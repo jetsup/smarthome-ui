@@ -57,6 +57,23 @@
             </option>
           </select>
         </div>
+        <div class="form-group">
+          <label for="node-name">Name</label>
+          <input id="node-name" v-model="nodeName" maxlength="16" placeholder="e.g. Living room" />
+        </div>
+        <div class="form-group">
+          <label>What is wired to this node?</label>
+          <div v-for="(c, i) in caps" :key="i" class="cap-row">
+            <select v-model="c.type">
+              <option v-for="t in capTypes" :key="t.v" :value="t.v">{{ t.l }}</option>
+            </select>
+            <input v-model.number="c.pin" type="number" min="0" max="48" :placeholder="c.type === 'i2c' ? 'I2C address' : c.type === 'uart' ? 'UART no.' : 'GPIO pin'" />
+            <input v-model="c.label" maxlength="10" placeholder="Label" />
+            <button v-if="caps.length > 1" type="button" class="btn btn-secondary btn-sm" @click="caps.splice(i, 1)" aria-label="Remove">&times;</button>
+          </div>
+          <button v-if="caps.length < 8" type="button" class="btn btn-secondary btn-sm" @click="caps.push(newCap())">+ Add another</button>
+          <p class="hint">Example: potentiometer on pin 34 → Analog input; LED on pin 25 → Digital output.</p>
+        </div>
         <div class="modal-actions">
           <button class="btn btn-secondary" @click="showModal = false">Cancel</button>
           <button class="btn btn-primary" @click="provisionNode" :disabled="!selectedGateway || provisioning">
@@ -73,6 +90,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useGatewayStore } from '../stores/gateways'
 import api from '../services/api'
+import { confirmDialog, notify } from '../services/dialog'
 
 const store = useGatewayStore()
 
@@ -85,6 +103,21 @@ const selectedNode = ref(null)
 const selectedGateway = ref('')
 const provisioning = ref(false)
 const errorMsg = ref('')
+const nodeName = ref('')
+const capTypes = [
+  { v: 'digitalOutput', l: 'Digital output' }, { v: 'analogOutput', l: 'Analog output (PWM)' },
+  { v: 'analogInput', l: 'Analog input' }, { v: 'digitalInput', l: 'Digital input' },
+  { v: 'relay', l: 'Relay' }, { v: 'i2c', l: 'I2C' }, { v: 'uart', l: 'UART' },
+]
+const newCap = () => ({ type: 'digitalOutput', pin: null, label: '' })
+const caps = ref([newCap()])
+
+function capPayload() {
+  return caps.value.map((c) => {
+    const io = c.type !== 'i2c' && c.type !== 'uart'
+    return { type: c.type, pin: io ? (c.pin || 0) : 0, extra: io ? 0 : (c.pin || 0), label: c.label || '' }
+  })
+}
 
 const typeLabels = {
   0: 'Unknown',
@@ -110,7 +143,7 @@ async function startScan() {
     setTimeout(() => stopScan(), 30000)
   } catch (e) {
     scanning.value = false
-    alert('Scan failed: ' + (e.response?.data?.error || e.message))
+    notify('Scan failed: ' + (e.response?.data?.error || e.message), 'error')
   }
 }
 
@@ -138,6 +171,8 @@ async function pollDiscovered() {
 function openAddDialog(d) {
   selectedNode.value = d
   selectedGateway.value = ''
+  nodeName.value = ''
+  caps.value = [newCap()]
   errorMsg.value = ''
   showModal.value = true
 }
@@ -150,6 +185,8 @@ async function provisionNode() {
     await api.post('/nodes/provision', {
       deviceId: selectedNode.value.deviceId,
       gatewayId: selectedGateway.value,
+      name: nodeName.value.trim(),
+      capabilitiesConfig: capPayload(),
       force: false,
     })
     // Remove from discovered list
@@ -160,11 +197,13 @@ async function provisionNode() {
   } catch (e) {
     const data = e.response?.data
     if (data?.status === 'gateway_conflict') {
-      if (confirm(data.message + '\n\nClick OK to switch gateways.')) {
+      if (await confirmDialog({ title: 'Switch gateway?', message: data.message, confirmText: 'Switch gateway' })) {
         try {
           await api.post('/nodes/provision', {
             deviceId: selectedNode.value.deviceId,
             gatewayId: selectedGateway.value,
+            name: nodeName.value.trim(),
+            capabilitiesConfig: capPayload(),
             force: true,
           })
           discovered.value = discovered.value.filter(
@@ -198,153 +237,119 @@ onUnmounted(() => {
 
 <style scoped>
 .back-link {
-  display: inline-block;
-  color: #0969da;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
+  display:inline-block;
+  color:var(--c-accent);
+  font-size:0.85rem;
+  margin-bottom:1rem;
 }
 .back-link:hover {
-  text-decoration: underline;
+  text-decoration:underline;
 }
 .page-desc {
-  color: #656d76;
-  font-size: 0.85rem;
-  margin-bottom: 1.5rem;
+  color:var(--c-muted);
+  font-size:0.85rem;
+  margin-bottom:1.5rem;
 }
 .scan-bar {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  display:flex;
+  align-items:center;
+  gap:1rem;
+  margin-bottom:1.5rem;
 }
 .scan-hint {
-  color: #656d76;
-  font-size: 0.85rem;
+  color:var(--c-muted);
+  font-size:0.85rem;
 }
 .scanning-box {
-  display: flex;
-  justify-content: center;
-  padding: 3rem;
+  display:flex;
+  justify-content:center;
+  padding:3rem;
 }
 .spinner {
-  border: 3px solid #e1e4e8;
-  border-top-color: #0969da;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  animation: spin 0.8s linear infinite;
+  border:3px solid var(--c-border);
+  border-top-color:var(--c-accent);
+  border-radius:50%;
+  width:32px;
+  height:32px;
+  animation:spin 0.8s linear infinite;
 }
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to { transform:rotate(360deg); }
 }
 .discovered-section {
-  margin-top: 0.5rem;
+  margin-top:0.5rem;
 }
 .discovered-section h4 {
-  font-size: 0.95rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
+  font-size:0.95rem;
+  font-weight:700;
+  margin-bottom:0.25rem;
 }
 .discovered-hint {
-  color: #656d76;
-  font-size: 0.8rem;
-  margin-bottom: 0.75rem;
+  color:var(--c-muted);
+  font-size:0.8rem;
+  margin-bottom:0.75rem;
 }
 .discovered-table {
-  width: 100%;
-  border-collapse: collapse;
+  width:100%;
+  border-collapse:collapse;
 }
 .discovered-table th {
-  text-align: left;
-  padding: 0.5rem;
-  font-size: 0.7rem;
-  color: #656d76;
-  text-transform: uppercase;
-  border-bottom: 1px solid #d0d7de;
+  text-align:left;
+  padding:0.5rem;
+  font-size:0.7rem;
+  color:var(--c-muted);
+  text-transform:uppercase;
+  border-bottom:1px solid var(--c-border);
 }
 .discovered-table td {
-  padding: 0.5rem;
-  border-top: 1px solid #f3f4f6;
-  font-size: 0.85rem;
+  padding:0.5rem;
+  border-top:1px solid var(--c-surface-2);
+  font-size:0.85rem;
 }
 .discovered-table code {
-  background: #f3f4f6;
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  background:var(--c-surface-2);
+  padding:0.1rem 0.35rem;
+  border-radius:4px;
+  font-size:0.8rem;
 }
 .btn-sm {
-  padding: 0.3rem 0.75rem;
-  font-size: 0.78rem;
-  width: auto;
+  padding:0.3rem 0.75rem;
+  font-size:0.78rem;
+  width:auto;
 }
 .state-msg {
-  padding: 2rem;
-  text-align: center;
-  color: #656d76;
-}
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-.modal {
-  background: #fff;
-  border-radius: 12px;
-  padding: 2rem;
-  width: 100%;
-  max-width: 420px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
-}
-.modal h4 {
-  font-size: 1rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
-}
-.modal p {
-  font-size: 0.85rem;
-  color: #656d76;
-  margin-bottom: 1rem;
-}
-.modal code {
-  background: #f3f4f6;
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  padding:2rem;
+  text-align:center;
+  color:var(--c-muted);
 }
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom:1rem;
 }
 .form-group label {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-  color: #1f2328;
+  display:block;
+  font-size:0.8rem;
+  font-weight:600;
+  margin-bottom:0.25rem;
+  color:var(--c-text);
 }
 .form-group select {
-  width: 100%;
-  padding: 0.5rem 0.65rem;
-  border: 1px solid #d0d7de;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  width:100%;
+  padding:0.5rem 0.65rem;
+  border:1px solid var(--c-border);
+  border-radius:6px;
+  font-size:0.85rem;
 }
 .form-group select:focus {
-  outline: none;
-  border-color: #0969da;
-}
-.modal-actions {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: flex-end;
+  outline:none;
+  border-color:var(--c-accent);
 }
 .error-msg {
-  color: #cf222e;
-  font-size: 0.8rem;
-  margin-top: 0.75rem;
+  color:var(--c-danger);
+  font-size:0.8rem;
+  margin-top:0.75rem;
 }
+.cap-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+.cap-row select { flex: 3; }
+.cap-row input { flex: 2; min-width: 0; }
+.hint { font-size: 12px; opacity: .7; margin-top: 6px; }
 </style>

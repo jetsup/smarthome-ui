@@ -132,145 +132,145 @@ async function selectGateway(gw) {
 
 <style scoped>
 .link-page {
-  display: flex;
-  justify-content: center;
-  padding-top: 3rem;
+  display:flex;
+  justify-content:center;
+  padding-top:3rem;
 }
 
 .card {
-  background: #fff;
-  padding: 2.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  width: 100%;
-  max-width: 420px;
+  background:var(--c-surface);
+  padding:2.5rem;
+  border-radius:12px;
+  box-shadow:0 4px 20px rgba(0, 0, 0, 0.08);
+  width:100%;
+  max-width:420px;
 }
 
 .card h2 {
-  margin-bottom: 0.5rem;
+  margin-bottom:0.5rem;
 }
 
 .card p {
-  color: #666;
-  margin-bottom: 1.5rem;
-  font-size: 0.9rem;
+  color:var(--c-muted);
+  margin-bottom:1.5rem;
+  font-size:0.9rem;
 }
 
 label {
-  display: block;
-  margin: 0.75rem 0 0.25rem;
-  font-size: 0.9rem;
-  color: #555;
+  display:block;
+  margin:0.75rem 0 0.25rem;
+  font-size:0.9rem;
+  color:var(--c-muted);
 }
 
 input {
-  width: 100%;
-  padding: 0.65rem 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  box-sizing: border-box;
+  width:100%;
+  padding:0.65rem 0.75rem;
+  border:1px solid var(--c-border);
+  border-radius:6px;
+  font-size:0.95rem;
+  box-sizing:border-box;
 }
 
 input:focus {
-  outline: none;
-  border-color: #0f3460;
+  outline:none;
+  border-color:#0f3460;
 }
 
 .btn-primary {
-  width: 100%;
-  margin-top: 1.25rem;
-  padding: 0.7rem;
-  background: #0f3460;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
+  width:100%;
+  margin-top:1.25rem;
+  padding:0.7rem;
+  background:#0f3460;
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  font-size:1rem;
+  font-weight:600;
+  cursor:pointer;
 }
 
 .btn-primary:hover {
-  background: #1a4a7a;
+  background:var(--c-accent-strong);
 }
 
 .error {
-  color: #e63946;
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
+  color:var(--c-danger);
+  font-size:0.85rem;
+  margin-top:0.5rem;
 }
 
 .empty p {
-  margin-bottom: 0.75rem;
+  margin-bottom:0.75rem;
 }
 
 .hint {
-  font-size: 0.85rem;
-  color: #888;
+  font-size:0.85rem;
+  color:var(--c-muted);
 }
 
 .hint a {
-  color: #0f3460;
+  color:#0f3460;
 }
 
 .gw-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  display:flex;
+  flex-direction:column;
+  gap:0.75rem;
 }
 
 .gw-option {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fafafa;
-  cursor: pointer;
-  font-size: 0.95rem;
-  text-align: left;
-  width: 100%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:0.75rem 1rem;
+  border:1px solid var(--c-border);
+  border-radius:8px;
+  background:var(--c-surface-2);
+  cursor:pointer;
+  font-size:0.95rem;
+  text-align:left;
+  width:100%;
 }
 
 .gw-option:hover {
-  border-color: #0f3460;
-  background: #f0f4ff;
+  border-color:#0f3460;
+  background:var(--c-info-bg);
 }
 
 .gw-option code {
-  font-size: 0.75rem;
-  color: #888;
+  font-size:0.75rem;
+  color:var(--c-muted);
 }
 
 .done h2 {
-  color: #155724;
+  color:var(--c-ok-text);
 }
 
 .key-display {
-  background: #f0f0f0;
-  padding: 0.75rem;
-  border-radius: 6px;
-  font-family: monospace;
-  word-break: break-all;
-  text-align: center;
+  background:var(--c-surface-2);
+  padding:0.75rem;
+  border-radius:6px;
+  font-family:monospace;
+  word-break:break-all;
+  text-align:center;
 }
 
 .key-display code {
-  font-size: 0.8rem;
+  font-size:0.8rem;
 }
 
 .spinner {
-  border: 3px solid #eee;
-  border-top: 3px solid #0f3460;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  animation: spin 0.8s linear infinite;
-  margin: 1rem auto;
+  border:3px solid var(--c-surface-2);
+  border-top:3px solid #0f3460;
+  border-radius:50%;
+  width:32px;
+  height:32px;
+  animation:spin 0.8s linear infinite;
+  margin:1rem auto;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to { transform:rotate(360deg); }
 }
 </style>

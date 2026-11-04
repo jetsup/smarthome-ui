@@ -52,6 +52,30 @@ const routes = [
         meta: { title: 'Gateway Settings' },
       },
       {
+        path: 'activity',
+        name: 'Activity',
+        component: () => import('../views/Activity.vue'),
+        meta: { title: 'Activity log' },
+      },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('../views/Profile.vue'),
+        meta: { title: 'Profile & Security' },
+      },
+      {
+        path: 'displays',
+        name: 'Displays',
+        component: () => import('../views/Displays.vue'),
+        meta: { title: 'Displays' },
+      },
+      {
+        path: 'displays/:id',
+        name: 'DisplayDetail',
+        component: () => import('../views/DisplayDetail.vue'),
+        meta: { title: 'Display' },
+      },
+      {
         path: 'pending-actions',
         name: 'PendingActions',
         component: () => import('../views/PendingActions.vue'),

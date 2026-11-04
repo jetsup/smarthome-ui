@@ -62,92 +62,92 @@ function copyKey() {
 
 <style scoped>
 .create-form {
-  padding: 2rem;
-  margin-bottom: 1.5rem;
+  padding:2rem;
+  margin-bottom:1.5rem;
 }
 
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom:1rem;
 }
 
 .form-group label {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-bottom: 0.3rem;
-  color: #1f2328;
+  display:block;
+  font-size:0.85rem;
+  font-weight:600;
+  margin-bottom:0.3rem;
+  color:var(--c-text);
 }
 
 .form-group input {
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid #d0d7de;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  width:100%;
+  padding:0.6rem 0.75rem;
+  border:1px solid var(--c-border);
+  border-radius:8px;
+  font-size:0.9rem;
 }
 
 .form-group input:focus {
-  outline: none;
-  border-color: #0969da;
-  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.1);
+  outline:none;
+  border-color:var(--c-accent);
+  box-shadow:0 0 0 3px rgba(9, 105, 218, 0.1);
 }
 
 .error {
-  color: #bc1c1b;
-  font-size: 0.85rem;
-  margin-bottom: 0.5rem;
+  color:var(--c-danger);
+  font-size:0.85rem;
+  margin-bottom:0.5rem;
 }
 
 .result-card {
-  padding: 2rem;
+  padding:2rem;
 }
 
 .result-card h3 {
-  font-size: 1.15rem;
-  color: #116329;
-  margin-bottom: 1rem;
+  font-size:1.15rem;
+  color:var(--c-ok-text);
+  margin-bottom:1rem;
 }
 
 .result-details {
-  margin-bottom: 1rem;
+  margin-bottom:1rem;
 }
 
 .result-details > div {
-  padding: 0.4rem 0;
-  font-size: 0.9rem;
-  display: flex;
-  gap: 1rem;
+  padding:0.4rem 0;
+  font-size:0.9rem;
+  display:flex;
+  gap:1rem;
 }
 
 .result-details span {
-  color: #656d76;
-  min-width: 100px;
+  color:var(--c-muted);
+  min-width:100px;
 }
 
 code {
-  background: #f3f4f6;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  background:var(--c-surface-2);
+  padding:0.15rem 0.4rem;
+  border-radius:4px;
+  font-size:0.8rem;
 }
 
 .key-value {
-  font-size: 0.75rem;
-  word-break: break-all;
+  font-size:0.75rem;
+  word-break:break-all;
 }
 
 .warning {
-  background: #fff8c5;
-  border: 1px solid #d4a72c;
-  color: #7a5d12;
-  padding: 0.6rem 0.85rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  margin-bottom: 1.25rem;
+  background:var(--c-warn-bg);
+  border:1px solid var(--c-warn);
+  color:var(--c-warn-text);
+  padding:0.6rem 0.85rem;
+  border-radius:8px;
+  font-size:0.85rem;
+  margin-bottom:1.25rem;
 }
 
 .result-actions {
-  display: flex;
-  gap: 0.75rem;
+  display:flex;
+  gap:0.75rem;
 }
 </style>

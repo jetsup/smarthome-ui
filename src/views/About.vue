@@ -32,61 +32,61 @@
 
 <style scoped>
 .about-page {
-  padding-top: 4rem;
-  padding-bottom: 4rem;
+  padding-top:4rem;
+  padding-bottom:4rem;
 }
 
 .about-header {
-  max-width: 650px;
-  margin-bottom: 3rem;
+  max-width:650px;
+  margin-bottom:3rem;
 }
 
 .section-label {
-  display: inline-block;
-  color: #0969da;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  margin-bottom: 0.5rem;
+  display:inline-block;
+  color:var(--c-accent);
+  font-size:0.8rem;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:1.5px;
+  margin-bottom:0.5rem;
 }
 
 .about-header h1 {
-  font-size: 2.25rem;
-  font-weight: 800;
-  margin-bottom: 1rem;
-  color: #1f2328;
+  font-size:2.25rem;
+  font-weight:800;
+  margin-bottom:1rem;
+  color:var(--c-text);
 }
 
 .lead {
-  font-size: 1.05rem;
-  color: #656d76;
-  line-height: 1.6;
+  font-size:1.05rem;
+  color:var(--c-muted);
+  line-height:1.6;
 }
 
 .about-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+  gap:1rem;
 }
 
 .about-card {
-  background: #fff;
-  border: 1px solid #d0d7de;
-  border-radius: 10px;
-  padding: 1.5rem;
+  background:var(--c-surface);
+  border:1px solid var(--c-border);
+  border-radius:10px;
+  padding:1.5rem;
 }
 
 .about-card h3 {
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  color: #1f2328;
+  font-size:1.05rem;
+  font-weight:700;
+  margin-bottom:0.5rem;
+  color:var(--c-text);
 }
 
 .about-card p {
-  color: #656d76;
-  font-size: 0.875rem;
-  line-height: 1.6;
+  color:var(--c-muted);
+  font-size:0.875rem;
+  line-height:1.6;
 }
 </style>

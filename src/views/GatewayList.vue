@@ -101,168 +101,131 @@ onMounted(() => store.fetchAll())
 
 <style scoped>
 .list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.25rem;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:1.25rem;
 }
 
 .section-title {
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size:1.05rem;
+  font-weight:700;
 }
 
 .gw-table-wrap {
-  overflow: hidden;
+  overflow:hidden;
 }
 
 .gw-table {
-  width: 100%;
-  border-collapse: collapse;
+  width:100%;
+  border-collapse:collapse;
 }
 
 .gw-table th {
-  text-align: left;
-  padding: 0.75rem 1rem;
-  background: #f6f8fa;
-  font-size: 0.75rem;
-  color: #656d76;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid #d0d7de;
+  text-align:left;
+  padding:0.75rem 1rem;
+  background:var(--c-bg);
+  font-size:0.75rem;
+  color:var(--c-muted);
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  border-bottom:1px solid var(--c-border);
 }
 
 .gw-table td {
-  padding: 0.75rem 1rem;
-  border-top: 1px solid #f3f4f6;
-  font-size: 0.9rem;
+  padding:0.75rem 1rem;
+  border-top:1px solid var(--c-surface-2);
+  font-size:0.9rem;
 }
 
 .gw-name {
-  color: #0969da;
-  font-weight: 600;
+  color:var(--c-accent);
+  font-weight:600;
 }
 
 .gw-name:hover {
-  text-decoration: underline;
+  text-decoration:underline;
 }
 
 code {
-  background: #f3f4f6;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
+  background:var(--c-surface-2);
+  padding:0.15rem 0.4rem;
+  border-radius:4px;
+  font-size:0.8rem;
 }
 
 .btn-sm {
-  padding: 0.3rem 0.75rem;
-  font-size: 0.8rem;
+  padding:0.3rem 0.75rem;
+  font-size:0.8rem;
 }
 
 .state-msg, .empty-state {
-  padding: 2rem;
-  text-align: center;
-  color: #656d76;
+  padding:2rem;
+  text-align:center;
+  color:var(--c-muted);
 }
 
 .empty-state p {
-  margin-bottom: 1rem;
+  margin-bottom:1rem;
 }
 
 .gw-cards {
-  display: none;
+  display:none;
 }
 
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
 
-.modal {
-  background: #fff;
-  border-radius: 10px;
-  padding: 1.5rem;
-  width: 400px;
-  max-width: 90vw;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-}
 
-.modal h4 {
-  font-size: 1rem;
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-}
 
-.modal p {
-  font-size: 0.85rem;
-  color: #1f2328;
-  margin-bottom: 0.5rem;
-}
 
-.modal-note {
-  color: #656d76 !important;
-  font-size: 0.8rem !important;
-}
 
-.modal-actions {
-  display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  margin-top: 1rem;
-}
 
 @media (max-width: 640px) {
-  .gw-table { display: none; }
-  .gw-cards { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.75rem; }
+  .gw-table { display:none; }
+  .gw-cards { display:flex; flex-direction:column; gap:0.5rem; padding:0.75rem; }
 
   .gw-mobile-card {
-    display: flex;
-    align-items: center;
-    background: #fafafa;
-    border: 1px solid #e1e4e8;
-    border-radius: 8px;
-    overflow: hidden;
+    display:flex;
+    align-items:center;
+    background:var(--c-surface-2);
+    border:1px solid var(--c-border);
+    border-radius:8px;
+    overflow:hidden;
   }
 
   .gw-mobile-link {
-    flex: 1;
-    display: block;
-    padding: 0.75rem;
-    text-decoration: none;
-    color: inherit;
+    flex:1;
+    display:block;
+    padding:0.75rem;
+    text-decoration:none;
+    color:inherit;
   }
 
   .gw-mobile-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.35rem;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:0.35rem;
   }
 
   .gw-mobile-top strong {
-    font-size: 0.9rem;
-    color: #0969da;
+    font-size:0.9rem;
+    color:var(--c-accent);
   }
 
   .gw-mobile-meta {
-    display: flex;
-    gap: 0.75rem;
-    font-size: 0.78rem;
-    color: #656d76;
+    display:flex;
+    gap:0.75rem;
+    font-size:0.78rem;
+    color:var(--c-muted);
   }
 
   .gw-mobile-meta code {
-    font-size: 0.7rem;
+    font-size:0.7rem;
   }
 
   .gw-mobile-del {
-    margin-right: 0.5rem;
-    flex-shrink: 0;
+    margin-right:0.5rem;
+    flex-shrink:0;
   }
 }
 </style>

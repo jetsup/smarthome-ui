@@ -1,0 +1,181 @@
+/* Theme variables. Light is the default; the OS dark setting switches them. */
+:root {
+  color-scheme: light dark;
+
+  /* content */
+  --c-bg: #f6f8fa;
+  --c-surface: #ffffff;
+  --c-surface-2: #f3f4f6;
+  --c-text: #1f2328;
+  --c-muted: #656d76;
+  --c-border: #d0d7de;
+  --c-accent: #0969da;
+  --c-accent-btn: #0969da; /* filled buttons with white text */
+  --c-accent-btn-hover: #0860ca;
+  --c-accent-strong: #0550ae;
+  --c-active-bg: #ddf4ff;
+  --c-danger: #cf222e;
+  --c-danger-bg: #ffebe9;
+  --c-danger-border: #ffc1bb;
+  --c-ok-bg: #dafbe1;
+  --c-ok-text: #116329;
+  --c-warn: #9a6700;
+  --c-warn-text: #7a5e00;
+  --c-warn-bg: #fff8c5;
+  --c-info-bg: #ddf4ff;
+
+  /* header / footer / sidebar (dark in dark mode, light in light mode) */
+  --c-chrome: #ffffff;
+  --c-chrome-2: #f6f8fa;
+  --c-chrome-line: #d8dee4;
+  --c-chrome-line2: #d0d7de;
+  --c-chrome-text: #1f2328;
+  --c-chrome-muted: #59636e;
+  --c-chrome-accent: #0969da;
+  --c-strong: #1f2328; /* "white" headings on dark chrome */
+
+  /* depth, glow and gradients */
+  --c-grad: linear-gradient(135deg, #0969da 0%, #6f42c1 100%);
+  --c-glow: rgba(9, 105, 218, 0.28);
+  --c-grid: rgba(31, 35, 40, 0.07);
+  --c-hover: rgba(9, 105, 218, 0.07);
+  --c-active-bar: #0969da;
+  --shadow-1: 0 1px 2px rgba(31, 35, 40, 0.06), 0 1px 1px rgba(31, 35, 40, 0.04);
+  --shadow-2: 0 8px 24px rgba(31, 35, 40, 0.10), 0 2px 6px rgba(31, 35, 40, 0.06);
+  --radius: 14px;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-bg: #0d1117;
+    --c-surface: #161b22;
+    --c-surface-2: #21262d;
+    --c-text: #c9d1d9;
+    --c-muted: #8b949e;
+    --c-border: #30363d;
+    --c-accent: #58a6ff;
+    --c-accent-btn: #1f6feb;
+    --c-accent-btn-hover: #388bfd;
+    --c-accent-strong: #79c0ff;
+    --c-active-bg: #1f2937;
+    --c-danger: #f85149;
+    --c-danger-bg: rgba(248, 81, 73, 0.15);
+    --c-danger-border: rgba(248, 81, 73, 0.4);
+    --c-ok-bg: rgba(46, 160, 67, 0.18);
+    --c-ok-text: #3fb950;
+    --c-warn: #d29922;
+    --c-warn-text: #e3b341;
+    --c-warn-bg: rgba(210, 153, 34, 0.18);
+    --c-info-bg: rgba(56, 139, 253, 0.15);
+
+    --c-chrome: #0d1117;
+    --c-chrome-2: #161b22;
+    --c-chrome-line: #21262d;
+    --c-chrome-line2: #30363d;
+    --c-chrome-text: #c9d1d9;
+    --c-chrome-muted: #8b949e;
+    --c-chrome-accent: #58a6ff;
+    --c-strong: #ffffff;
+
+    --c-grad: linear-gradient(135deg, #388bfd 0%, #a371f7 100%);
+    --c-glow: rgba(56, 139, 253, 0.35);
+    --c-grid: rgba(240, 246, 252, 0.05);
+    --c-hover: rgba(56, 139, 253, 0.10);
+    --c-active-bar: #58a6ff;
+    --shadow-1: 0 0 0 1px rgba(240, 246, 252, 0.03) inset;
+    --shadow-2: 0 12px 32px rgba(1, 4, 9, 0.55), 0 0 0 1px rgba(240, 246, 252, 0.04) inset;
+  }
+}
+
+/* Form controls follow the theme (zero specificity so component styles win). */
+:where(input, select, textarea) {
+  background-color: var(--c-surface);
+  color: var(--c-text);
+  border-color: var(--c-border);
+}
+:where(input, textarea)::placeholder {
+  color: var(--c-muted);
+}
+
+/* ── Scrollbars (themed, thin) ───────────────────────────────────────────── */
+* { scrollbar-width: thin; scrollbar-color: var(--c-border) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--c-border);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--c-muted); background-clip: padding-box; border: 3px solid transparent; }
+*::-webkit-scrollbar-corner { background: transparent; }
+
+/* ── Modals ──────────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 12, 20, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: ov-in 0.15s ease-out;
+}
+.modal {
+  position: relative;
+  width: 420px;
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 1.5rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-2), 0 0 0 1px var(--c-glow);
+  animation: modal-in 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.modal::before {
+  content: '';
+  position: absolute;
+  left: 18px; right: 18px; top: 0;
+  height: 2px;
+  border-radius: 0 0 4px 4px;
+  background: var(--c-grad);
+}
+.modal-wide { width: 580px; }
+.modal h4 { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.6rem; color: var(--c-text); }
+.modal p { font-size: 0.875rem; line-height: 1.5; color: var(--c-text); margin-bottom: 0.5rem; }
+.modal .modal-note, .modal-note { color: var(--c-muted) !important; font-size: 0.8rem !important; }
+.modal-error {
+  color: var(--c-danger) !important; font-size: 0.8rem !important; margin-top: 0.75rem !important;
+  padding: 0.55rem 0.7rem; background: var(--c-danger-bg); border: 1px solid var(--c-danger-border); border-radius: 8px;
+}
+.modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem; flex-wrap: wrap; }
+@keyframes ov-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: none; } }
+
+/* ── Confirm dialog + toasts (DialogHost) ────────────────────────────────── */
+.dlg-icon {
+  width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 12px;
+  background: var(--c-active-bg); color: var(--c-accent);
+}
+.dlg-icon.danger { background: var(--c-danger-bg); color: var(--c-danger); }
+.dlg-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.btn-danger-solid { background: var(--c-danger); color: #fff; border: 1px solid var(--c-danger); }
+.btn-danger-solid:hover { filter: brightness(1.08); }
+.toast-stack { position: fixed; right: 20px; bottom: 20px; z-index: 3000; display: flex; flex-direction: column; gap: 10px; max-width: min(380px, calc(100vw - 32px)); }
+.toast-item {
+  display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px;
+  background: var(--c-surface); border: 1px solid var(--c-border); border-left: 4px solid var(--c-accent);
+  box-shadow: var(--shadow-2); color: var(--c-text); font-size: 0.875rem; line-height: 1.4;
+  animation: modal-in 0.2s ease-out;
+}
+.toast-item.error { border-left-color: var(--c-danger); }
+.toast-item.ok { border-left-color: var(--c-ok-text); }
+.toast-item button { margin-left: auto; background: none; border: 0; color: var(--c-muted); cursor: pointer; font-size: 18px; line-height: 1; }
+
+:root { accent-color: var(--c-accent); }
