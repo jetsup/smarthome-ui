@@ -137,6 +137,8 @@
         </table>
       </div>
 
+      <RulesPanel :gateway-id="route.params.id" :nodes="nodes" />
+
       <!-- Add Binding modal -->
       <div v-if="showAddBinding" class="modal-overlay" @click.self="showAddBinding = false">
         <div class="modal">
@@ -197,30 +199,8 @@
           </div>
 
           <div class="form-group">
-            <label>Capabilities</label>
-            <a href="https://lastminuteengineers.com/esp32-pinout-reference" target="_blank" class="pin-ref-link">ESP32 Pinout Reference</a>
-            <div v-for="(cap, i) in provCaps" :key="i" class="cap-row">
-              <select v-model="cap.type" class="cap-type-select">
-                <option value="digitalOutput">Digital Output</option>
-                <option value="analogOutput">Analog Output</option>
-                <option value="analogInput">Analog Input</option>
-                <option value="digitalInput">Digital Input</option>
-                <option value="relay">Relay</option>
-                <option value="i2c">I2C</option>
-                <option value="uart">UART</option>
-              </select>
-              <select v-if="cap.type !== 'i2c' && cap.type !== 'uart'" v-model.number="cap.pin" class="cap-pin" :class="{ 'cap-pin-err': usedPins(i).has(Number(cap.pin)) }">
-                <option v-for="p in PIN_OPTIONS" :key="p" :value="p" :disabled="p !== 0 && usedPins(i).has(p)">
-                  {{ pinLabel(p, cap.type) }}
-                </option>
-              </select>
-              <span v-if="usedPins(i).has(Number(cap.pin))" class="pin-err-msg">Pin already used by another capability</span>
-              <input v-if="cap.type === 'i2c'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="Addr (hex)" />
-              <input v-if="cap.type === 'uart'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="UART #" />
-              <input v-model="cap.label" class="cap-label" placeholder="Label" />
-              <button @click="provCaps.splice(i, 1)" class="btn btn-danger btn-sm">&times;</button>
-            </div>
-            <button @click="addCap" class="btn btn-secondary btn-sm">+ Add Capability</button>
+            <label>What is wired to this node?</label>
+            <CapabilityEditor v-model="provCaps" />
           </div>
         </div>
 
@@ -259,6 +239,9 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGatewayStore } from '../stores/gateways'
 import api from '../services/api'
+import CapabilityEditor from '../components/CapabilityEditor.vue'
+import RulesPanel from '../components/RulesPanel.vue'
+import { loadCatalog, blankCap, payload } from '../services/catalog'
 
 const route = useRoute()
 const router = useRouter()
@@ -604,7 +587,7 @@ function confirmLink(item) {
   linkTarget.value = item
   linkConflict.value = ''
   provName.value = ''
-  provCaps.value = [{ type: 'digitalOutput', pin: 2, extra: 0, label: '' }]
+  provCaps.value = [blankCap()]
   showLinkModal.value = true
 }
 
@@ -614,12 +597,7 @@ async function doLink() {
   const force = !!linkConflict.value
   provisioningIds.value.add(deviceId)
   try {
-    const caps = provCaps.value.map(c => ({
-      type: c.type,
-      pin: c.type !== 'i2c' && c.type !== 'uart' ? (Number(c.pin) || 0) : 0,
-      extra: ['i2c', 'uart'].includes(c.type) ? (Number(c.extra) || 0) : 0,
-      label: c.label || '',
-    }))
+    const caps = payload(provCaps.value)
     await store.provisionNode(route.params.id, deviceId, force, provName.value, caps)
     addToast(`Node ${deviceId} linking in progress`)
     showLinkModal.value = false

@@ -179,3 +179,26 @@
 .toast-item button { margin-left: auto; background: none; border: 0; color: var(--c-muted); cursor: pointer; font-size: 18px; line-height: 1; }
 
 :root { accent-color: var(--c-accent); }
+
+/* Form controls inside dialogs and cards (pages with their own styling override this) */
+:where(.modal, .card) input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),
+:where(.modal, .card) select,
+:where(.modal, .card) textarea {
+  background: var(--c-surface);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 0.875rem;
+  min-width: 0;
+}
+:where(.modal, .card) input:focus, :where(.modal, .card) select:focus {
+  outline: none;
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 3px var(--c-hover);
+}
+:where(.modal, .card) input[type=range] { accent-color: var(--c-accent); }
+
+/* Cards that follow each other always keep a gap (margins collapse, so no doubling). */
+.card.section + .card.section { margin-top: 1rem; }

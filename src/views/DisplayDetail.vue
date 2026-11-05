@@ -39,7 +39,16 @@
           <span>Accent colour</span>
           <div class="swatches">
             <button v-for="a in accents" :key="a" class="sw" :class="{ on: (hmi.accent || '00A8E8').toUpperCase() === a }"
-              :style="{ background: '#' + a }" :aria-label="'Accent #' + a" @click="setLook({ accent: a })"></button>
+              :style="{ background: '#' + shownAccent(a) }" :aria-label="'Accent #' + a" @click="setLook({ accent: a })"></button>
+          </div>
+        </div>
+        <p class="hint ap-note">White switches to black on a light screen automatically.</p>
+        <div class="ap-row">
+          <span>Background colour</span>
+          <div class="swatches">
+            <button v-for="b in backgrounds" :key="b[0]" class="sw" :class="{ on: (hmi.background || '') === b[0], auto: !b[0] }"
+              :style="b[0] ? { background: '#' + b[0] } : {}" :title="b[1]" :aria-label="'Background ' + b[1]"
+              @click="setLook({ background: b[0] })"></button>
           </div>
         </div>
         <div class="ap-row">
@@ -47,9 +56,33 @@
           <input type="range" min="10" max="100" step="5" v-model.number="brightness" @change="setLook({ brightness })" />
         </div>
         <div class="ap-row">
-          <span>Status light</span>
+          <span>RGB light <small>onboard LED</small></span>
           <label class="check"><input type="checkbox" :checked="hmi.statusLed !== false" @change="setLook({ statusLed: $event.target.checked })" /> On</label>
         </div>
+        <template v-if="hmi.statusLed !== false">
+          <div class="ap-row">
+            <span>Pattern</span>
+            <div class="seg wrap">
+              <button v-for="p in patterns" :key="p[0]" :class="{ on: (hmi.ledMode || 'solid') === p[0] }" @click="setLook({ ledMode: p[0] })">{{ p[1] }}</button>
+            </div>
+          </div>
+          <div class="ap-row">
+            <span>Colour <small v-if="!hmi.ledColor">follows accent</small></span>
+            <div class="swatches">
+              <button v-for="col in ledColors" :key="col" class="sw" :class="{ on: (hmi.ledColor || '') === col, auto: !col }"
+                :style="col ? { background: '#' + col } : {}" :title="col ? '#' + col : 'Follow the accent colour'"
+                @click="setLook({ ledColor: col })"></button>
+            </div>
+          </div>
+          <div class="ap-row">
+            <span>LED brightness <small>{{ ledBrightness }}%</small></span>
+            <input type="range" min="1" max="100" v-model.number="ledBrightness" @change="setLook({ ledBrightness })" />
+          </div>
+          <div v-if="(hmi.ledMode || 'solid') !== 'solid'" class="ap-row">
+            <span>Pattern speed <small>{{ ledSpeed }}</small></span>
+            <input type="range" min="1" max="100" v-model.number="ledSpeed" @change="setLook({ ledSpeed })" />
+          </div>
+        </template>
       </div>
 
       <!-- Nodes -->
@@ -110,6 +143,26 @@ const msg = ref('')
 const msgOk = ref(false)
 const nameInput = ref('')
 const brightness = ref(100)
+const backgrounds = [['', 'Default'], ['000000', 'Black'], ['121214', 'Graphite'], ['0B1F33', 'Navy'], ['10261C', 'Forest'],
+  ['2A1538', 'Plum'], ['F2F4F7', 'Paper'], ['FFF4E0', 'Cream'], ['E6F0FF', 'Sky']]
+const patterns = [['solid', 'Solid'], ['blink', 'Blink'], ['breathe', 'Breathe'], ['fade', 'Fade'], ['rainbow', 'Rainbow cycle'],
+  ['random', 'Random'], ['strobe', 'Strobe'], ['twinkle', 'Twinkle'], ['flicker', 'Flame'], ['sparkle', 'Sparkle']]
+const ledColors = ['', 'FF2D2D', 'FF8A00', 'FFD400', '3FB950', '00A8E8', '3B5BFF', 'A371F7', 'FF4FA3', 'FFFFFF']
+const ledBrightness = ref(40)
+const ledSpeed = ref(50)
+
+// Is the display's page light? (custom background wins over the theme)
+function pageIsLight() {
+  const bg = hmi.value?.background
+  if (bg) {
+    const n = parseInt(bg, 16)
+    return (((n >> 16) & 255) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000 > 140
+  }
+  return hmi.value?.theme === 'light'
+}
+// A white accent is unreadable on a light page, so it shows (and is drawn) as near-black.
+function shownAccent(a) { return a === 'FFFFFF' && pageIsLight() ? '111418' : a }
+
 const accents = ['00A8E8', '3FB950', 'F0A030', 'A371F7', 'F85149', 'E85D9A', '14B8A6', 'FFFFFF']
 
 const path = `/hmis/${route.params.id}`
@@ -119,6 +172,8 @@ function apply(data) {
   nodes.value = data.nodes || []
   nameInput.value = data.hmi.name
   brightness.value = data.hmi.brightness || 100
+  ledBrightness.value = data.hmi.ledBrightness || 40
+  ledSpeed.value = data.hmi.ledSpeed || 50
 }
 
 async function setLook(body) {
@@ -239,5 +294,8 @@ onMounted(load)
 .seg button.on { background: var(--accent); color: #fff; }
 .swatches { display: flex; gap: 10px; flex-wrap: wrap; }
 .sw { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; }
+.sw.auto { background: repeating-conic-gradient(var(--border) 0 25%, transparent 0 50%) 50% / 10px 10px; }
+.ap-note { margin: -4px 0 8px; }
+.seg.wrap { flex-wrap: wrap; }
 .sw.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg-card, transparent); }
 </style>

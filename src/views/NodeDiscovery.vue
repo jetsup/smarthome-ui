@@ -63,16 +63,8 @@
         </div>
         <div class="form-group">
           <label>What is wired to this node?</label>
-          <div v-for="(c, i) in caps" :key="i" class="cap-row">
-            <select v-model="c.type">
-              <option v-for="t in capTypes" :key="t.v" :value="t.v">{{ t.l }}</option>
-            </select>
-            <input v-model.number="c.pin" type="number" min="0" max="48" :placeholder="c.type === 'i2c' ? 'I2C address' : c.type === 'uart' ? 'UART no.' : 'GPIO pin'" />
-            <input v-model="c.label" maxlength="10" placeholder="Label" />
-            <button v-if="caps.length > 1" type="button" class="btn btn-secondary btn-sm" @click="caps.splice(i, 1)" aria-label="Remove">&times;</button>
-          </div>
-          <button v-if="caps.length < 8" type="button" class="btn btn-secondary btn-sm" @click="caps.push(newCap())">+ Add another</button>
-          <p class="hint">Example: potentiometer on pin 34 → Analog input; LED on pin 25 → Digital output.</p>
+          <CapabilityEditor v-model="caps" />
+          <p class="hint">Example: potentiometer on pin 34 → Analog input; LED on pin 25 → Digital output; a NeoPixel ring → NeoPixel LEDs with the number of LEDs.</p>
         </div>
         <div class="modal-actions">
           <button class="btn btn-secondary" @click="showModal = false">Cancel</button>
@@ -90,6 +82,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useGatewayStore } from '../stores/gateways'
 import api from '../services/api'
+import CapabilityEditor from '../components/CapabilityEditor.vue'
+import { loadCatalog, blankCap, payload } from '../services/catalog'
 import { confirmDialog, notify } from '../services/dialog'
 
 const store = useGatewayStore()
@@ -104,33 +98,9 @@ const selectedGateway = ref('')
 const provisioning = ref(false)
 const errorMsg = ref('')
 const nodeName = ref('')
-const capTypes = [
-  { v: 'digitalOutput', l: 'Digital output' }, { v: 'analogOutput', l: 'Analog output (PWM)' },
-  { v: 'analogInput', l: 'Analog input' }, { v: 'digitalInput', l: 'Digital input' },
-  { v: 'relay', l: 'Relay' }, { v: 'i2c', l: 'I2C' }, { v: 'uart', l: 'UART' },
-]
-const newCap = () => ({ type: 'digitalOutput', pin: null, label: '' })
-const caps = ref([newCap()])
+const caps = ref([blankCap()])
 
-function capPayload() {
-  return caps.value.map((c) => {
-    const io = c.type !== 'i2c' && c.type !== 'uart'
-    return { type: c.type, pin: io ? (c.pin || 0) : 0, extra: io ? 0 : (c.pin || 0), label: c.label || '' }
-  })
-}
-
-const typeLabels = {
-  0: 'Unknown',
-  1: 'Analog',
-  2: 'Digital',
-  3: 'Relay',
-  4: 'IR',
-  5: 'Hybrid',
-}
-
-function typeLabel(t) {
-  return typeLabels[t] || 'Unknown'
-}
+const capPayload = () => payload(caps.value)
 
 let scanPoll = null
 
@@ -172,7 +142,7 @@ function openAddDialog(d) {
   selectedNode.value = d
   selectedGateway.value = ''
   nodeName.value = ''
-  caps.value = [newCap()]
+  caps.value = [blankCap()]
   errorMsg.value = ''
   showModal.value = true
 }
@@ -223,6 +193,8 @@ async function provisionNode() {
 }
 
 onMounted(async () => {
+  await loadCatalog()
+  caps.value = [blankCap()]
   await store.fetchAll()
   gateways.value = store.gateways
   loadingGateways.value = false

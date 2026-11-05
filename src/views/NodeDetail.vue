@@ -1,6 +1,6 @@
 <template>
   <div class="fade-in">
-    <router-link :to="backLink" class="back-link">&larr; Back to Gateway {{ node?.gatewayId }}</router-link>
+    <router-link :to="backLink" class="back-link">&larr; Back to {{ gatewayName ? `“${gatewayName}”` : 'gateway' }}</router-link>
 
     <div v-if="initialLoading" class="state-msg">Loading…</div>
 
@@ -65,7 +65,7 @@
           <div v-for="(cap, i) in caps" :key="i" class="cap-item">
             <div class="cap-info">
               <span class="cap-label">{{ cap.label || capTypeLabel(cap.type) }}</span>
-              <span class="cap-type">{{ capTypeLabel(cap.type) }} (pin {{ cap.pin }})</span>
+              <span class="cap-type">{{ capTypeLabel(cap.type) }}{{ cap.pin ? ` (pin ${cap.pin})` : '' }}{{ cap.type === 'neopixel' ? ` · ${cap.count} LEDs${cap.ring ? ' · ring' : ''}` : '' }}</span>
             </div>
             <div class="cap-control">
               <button v-if="cap.type === 'digitalOutput' || cap.type === 'relay'"
@@ -83,11 +83,13 @@
               <span v-else-if="cap.type === 'digitalInput'" class="cap-value">
                 {{ node.value ? 'HIGH' : 'LOW' }}
               </span>
-              <span v-else class="cap-value">—</span>
+              <span v-else class="cap-value">{{ cap.display || '—' }}</span>
             </div>
           </div>
         </div>
       </div>
+
+      <ModuleControls :node="node" />
 
       <!-- Quick toggles for old relay type (backward compat) -->
       <div v-if="!node.capabilitiesConfig && node.deviceType === 3" class="card section">
@@ -111,34 +113,7 @@
         <h4>Edit Capabilities</h4>
         <p>Configure capabilities for device <code>{{ node?.deviceId }}</code>.</p>
 
-        <div class="prov-form">
-          <div class="form-group">
-            <label>Capabilities</label>
-            <a href="https://lastminuteengineers.com/esp32-pinout-reference" target="_blank" class="pin-ref-link">ESP32 Pinout Reference</a>
-            <div v-for="(cap, i) in editCaps" :key="i" class="cap-row">
-              <select v-model="cap.type" class="cap-type-select">
-                <option value="digitalOutput">Digital Output</option>
-                <option value="analogOutput">Analog Output</option>
-                <option value="analogInput">Analog Input</option>
-                <option value="digitalInput">Digital Input</option>
-                <option value="relay">Relay</option>
-                <option value="i2c">I2C</option>
-                <option value="uart">UART</option>
-              </select>
-              <select v-if="cap.type !== 'i2c' && cap.type !== 'uart'" v-model.number="cap.pin" class="cap-pin" :class="{ 'cap-pin-err': usedPins(i).has(Number(cap.pin)) }">
-                <option v-for="p in PIN_OPTIONS" :key="p" :value="p" :disabled="p !== 0 && usedPins(i).has(p)">
-                  {{ pinLabel(p, cap.type) }}
-                </option>
-              </select>
-              <span v-if="usedPins(i).has(Number(cap.pin))" class="pin-err-msg">Pin already used by another capability</span>
-              <input v-if="cap.type === 'i2c'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="Addr (hex)" />
-              <input v-if="cap.type === 'uart'" v-model.number="cap.extra" type="number" class="cap-pin" placeholder="UART #" />
-              <input v-model="cap.label" class="cap-label" placeholder="Label" />
-              <button @click="editCaps.splice(i, 1)" class="btn btn-danger btn-sm">&times;</button>
-            </div>
-            <button @click="addEditCap" class="btn btn-secondary btn-sm">+ Add Capability</button>
-          </div>
-        </div>
+        <CapabilityEditor v-model="editCaps" />
 
         <div class="modal-actions">
           <button @click="showEditModal = false" class="btn btn-secondary" :disabled="saving">Cancel</button>
@@ -161,6 +136,9 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import api from '../services/api'
+import CapabilityEditor from '../components/CapabilityEditor.vue'
+import ModuleControls from '../components/ModuleControls.vue'
+import { loadCatalog, typeOf, editable, payload } from '../services/catalog'
 
 const route = useRoute()
 
@@ -228,7 +206,7 @@ const capLabels = {
 }
 
 function capTypeLabel(type) {
-  return capLabels[type] || type
+  return typeOf(type)?.label || capLabels[type] || type
 }
 
 const typeLabel = computed(() => typeLabels[node.value?.deviceType] || 'Unknown')
@@ -247,7 +225,7 @@ const caps = computed(() => {
 const capsSummary = computed(() => {
   const cc = node.value?.capabilitiesConfig
   if (Array.isArray(cc) && cc.length > 0) {
-    return cc.map(c => capTypeLabel(c.type)).join(', ')
+    return cc.length > 3 ? `${cc.length} modules` : cc.map(c => capTypeLabel(c.type)).join(', ')
   }
   // Fallback to bitmask
   const capsBits = node.value?.capabilities
@@ -369,13 +347,9 @@ function defaultPinForType(type) {
   return pins[type] ?? 0
 }
 
-function addEditCap() {
-  editCaps.value.push({ type: 'digitalOutput', pin: 2, extra: 0, label: '' })
-}
-
 function openEditCaps() {
-  const cc = node.value?.capabilitiesConfig
-  editCaps.value = Array.isArray(cc) ? cc.map(c => ({ ...c })) : []
+  loadCatalog()
+  editCaps.value = editable(node.value?.capabilitiesConfig)
   capsError.value = ''
   showEditModal.value = true
 }
@@ -384,13 +358,7 @@ async function saveCaps() {
   saving.value = true
   capsError.value = ''
   try {
-    const caps = editCaps.value.map(c => ({
-      type: c.type,
-      pin: c.type !== 'i2c' && c.type !== 'uart' ? (Number(c.pin) || 0) : 0,
-      extra: ['i2c', 'uart'].includes(c.type) ? (Number(c.extra) || 0) : 0,
-      label: c.label || '',
-    }))
-    await api.put(`/nodes/${route.params.nodeId}/capabilities`, { capabilitiesConfig: caps })
+    await api.put(`/nodes/${route.params.nodeId}/capabilities`, { capabilitiesConfig: payload(editCaps.value) })
     await fetchNode()
     addToast('Capabilities updated')
     showEditModal.value = false
@@ -402,6 +370,12 @@ async function saveCaps() {
   }
 }
 
+const gatewayName = ref('')
+async function loadGatewayName(id) {
+  if (!id || gatewayName.value) return
+  try { gatewayName.value = (await api.get(`/gateways/${id}`)).data?.name || '' } catch { /* keep the generic label */ }
+}
+
 async function fetchNode() {
   try {
     const { data } = await api.get(`/nodes/${route.params.nodeId}`)
@@ -411,6 +385,7 @@ async function fetchNode() {
       node.value = data
     }
     initCapStates()
+    loadGatewayName(node.value?.gatewayId)
   } catch {
     node.value = null
   }
