@@ -85,7 +85,7 @@
       <p class="modal-note">Nodes that are online are unpaired so any gateway can discover them. Nodes that cannot be reached are kept as unassigned nodes.</p>
       <div class="form-group">
         <label for="del-pw">Your password</label>
-        <input id="del-pw" v-model="deletePw" type="password" autocomplete="current-password" @keyup.enter="deletePw && doDelete()" />
+        <PasswordInput id="del-pw" v-model="deletePw" autocomplete="current-password" @keyup.enter="deletePw && doDelete()" />
       </div>
       <p v-if="deleteErr" class="un-err">{{ deleteErr }}</p>
       <div class="modal-actions">

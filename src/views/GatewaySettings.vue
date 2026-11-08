@@ -85,7 +85,7 @@
           </div>
           <div class="form-row">
             <label for="wifi-pass">Password</label>
-            <input id="wifi-pass" v-model="wifiPass" type="password" placeholder="Network password" maxlength="63" class="field-input">
+            <PasswordInput id="wifi-pass" v-model="wifiPass" placeholder="Network password" maxlength="63" class="field-input" />
           </div>
           <div class="form-actions">
             <button type="submit" class="btn btn-primary" :disabled="wifiSaving">{{ wifiSaving ? 'Saving…' : 'Save' }}</button>

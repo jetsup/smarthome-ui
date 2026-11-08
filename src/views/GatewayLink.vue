@@ -8,7 +8,7 @@
         <input v-model="email" type="email" required autocomplete="email" />
 
         <label>Password</label>
-        <input v-model="pass" type="password" required autocomplete="current-password" />
+        <PasswordInput v-model="pass" required autocomplete="current-password" />
 
         <p v-if="error" class="error">{{ error }}</p>
 

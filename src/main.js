@@ -4,9 +4,11 @@ import router from './router'
 import './theme.css'
 import App from './App.vue'
 import Icon from './components/Icon.vue'
+import PasswordInput from './components/PasswordInput.vue'
 
 const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.component('Icon', Icon)
+app.component('PasswordInput', PasswordInput)
 app.mount('#app')

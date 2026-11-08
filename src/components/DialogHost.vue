@@ -10,7 +10,7 @@
       <p v-if="state.confirm.note" class="modal-note">{{ state.confirm.note }}</p>
       <div v-if="state.confirm.password" class="form-group" style="margin-top:12px">
         <label for="dlg-pw">Your password</label>
-        <input id="dlg-pw" ref="pwInput" v-model="pw" type="password" autocomplete="current-password" @keyup.enter="okClick" />
+        <PasswordInput id="dlg-pw" ref="pwInput" v-model="pw" autocomplete="current-password" @keyup.enter="okClick" />
       </div>
       <div class="modal-actions">
         <button class="btn btn-secondary" @click="state.confirm.resolve(false)">{{ state.confirm.cancelText }}</button>

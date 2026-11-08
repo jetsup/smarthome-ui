@@ -12,7 +12,7 @@
           </div>
           <div class="form-group">
             <label for="password">Password</label>
-            <input id="password" v-model="password" type="password" required placeholder="••••••••" />
+            <PasswordInput id="password" v-model="password" required placeholder="••••••••" />
           </div>
           <p v-if="error" class="error">{{ error }}</p>
           <button type="submit" :disabled="loading" class="btn btn-primary btn-block">

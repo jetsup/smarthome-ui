@@ -20,11 +20,11 @@
         </div>
         <div class="form-group">
           <label for="password">Password</label>
-          <input id="password" v-model="password" type="password" required minlength="6" placeholder="At least 6 characters" />
+          <PasswordInput id="password" v-model="password" required minlength="6" placeholder="At least 6 characters" />
         </div>
         <div class="form-group">
           <label for="confirmPassword">Confirm Password</label>
-          <input id="confirmPassword" v-model="confirmPassword" type="password" required placeholder="Repeat your password" />
+          <PasswordInput id="confirmPassword" v-model="confirmPassword" required placeholder="Repeat your password" />
         </div>
         <p v-if="error" class="error">{{ error }}</p>
         <p v-if="passError" class="error">{{ passError }}</p>

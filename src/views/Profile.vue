@@ -25,7 +25,7 @@
           <label class="span2">Email<input v-model="form.email" type="email" required /></label>
           <label v-if="emailChanged" class="span2">
             Current password <span class="req">(needed to change your email)</span>
-            <input v-model="form.currentPassword" type="password" autocomplete="current-password" required />
+            <PasswordInput v-model="form.currentPassword" autocomplete="current-password" required />
           </label>
           <div class="span2 actions">
             <button class="btn btn-primary" :disabled="savingDetails || !detailsChanged">{{ savingDetails ? 'Saving…' : 'Save changes' }}</button>
@@ -38,9 +38,9 @@
         <header><h4>Password</h4><p class="hint">Changing it signs you out everywhere else.</p></header>
         <div v-if="pwMsg" :class="pwOk ? 'ok-box' : 'err-box'">{{ pwMsg }}</div>
         <form class="grid" @submit.prevent="changePassword">
-          <label class="span2">Current password<input v-model="pw.current" type="password" autocomplete="current-password" required /></label>
-          <label>New password<input v-model="pw.next" type="password" minlength="8" autocomplete="new-password" required /></label>
-          <label>Confirm new password<input v-model="pw.confirm" type="password" minlength="8" autocomplete="new-password" required /></label>
+          <label class="span2">Current password<PasswordInput v-model="pw.current" autocomplete="current-password" required /></label>
+          <label>New password<PasswordInput v-model="pw.next" minlength="8" autocomplete="new-password" required /></label>
+          <label>Confirm new password<PasswordInput v-model="pw.confirm" minlength="8" autocomplete="new-password" required /></label>
           <div class="span2 strength" v-if="pw.next">
             <span :class="['bar', strength.level]" :style="{ width: strength.pct + '%' }"></span>
             <small>{{ strength.label }}</small>
@@ -128,7 +128,7 @@
         <form v-if="pwAction" class="pwbox" @submit.prevent="runPwAction">
           <label>
             Confirm your password to {{ pwAction === 'regen' ? 'get new recovery codes' : 'turn this method off' }}
-            <input v-model="actionPw" type="password" autocomplete="current-password" autofocus required />
+            <PasswordInput v-model="actionPw" autocomplete="current-password" autofocus required />
           </label>
           <div class="actions">
             <button class="btn btn-primary" :disabled="busy || !actionPw">Confirm</button>
