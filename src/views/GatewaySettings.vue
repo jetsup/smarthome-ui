@@ -38,6 +38,15 @@
         <p class="hint">Reload sends every node its saved name, modules and key again, for nodes that were erased or re-flashed.</p>
       </div>
 
+      <!-- Delete -->
+      <div class="card section">
+        <div class="section-header">
+          <h4>Delete gateway</h4>
+          <p class="hint">Removes this gateway with its displays, rules and saved Wi-Fi networks. Its nodes are not reset: they stay as unassigned nodes on the Gateways page, ready to be given to another gateway.</p>
+        </div>
+        <button class="btn btn-danger" :disabled="deleting" @click="deleteGateway">{{ deleting ? 'Deleting…' : 'Delete gateway' }}</button>
+      </div>
+
       <!-- WiFi: Saved networks (priority order) -->
       <div class="card section">
         <div class="section-header">
@@ -90,13 +99,15 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useGatewayStore } from '../stores/gateways'
 import api from '../services/api'
 import { confirmDialog, notify } from '../services/dialog'
 
 const route = useRoute()
 const store = useGatewayStore()
+const router = useRouter()
+const deleting = ref(false)
 const loading = ref(true)
 const gw = computed(() => store.currentGateway)
 
@@ -133,6 +144,23 @@ async function fetchCredentials() {
 
 const restarting = ref(false)
 const reloading = ref(false)
+async function deleteGateway() {
+  const ok = await confirmDialog({
+    title: 'Delete this gateway?',
+    message: `${gw.value.name} is removed. Its nodes are kept as unassigned nodes and are not reset.`,
+    confirmText: 'Delete',
+  })
+  if (!ok) return
+  deleting.value = true
+  try {
+    await store.remove(route.params.id)
+    notify('Gateway deleted. Its nodes are kept as unassigned.', 'ok')
+    router.push('/gateways')
+  } catch (e) {
+    notify(e.response?.data?.error || 'Could not delete the gateway', 'error')
+  } finally { deleting.value = false }
+}
+
 async function reloadNodes() {
   const ok = await confirmDialog({
     title: 'Reload saved settings on all nodes?',

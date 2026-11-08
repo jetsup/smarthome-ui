@@ -55,6 +55,25 @@
         </div>
       </div>
     </div>
+
+    <!-- Nodes left behind by a deleted gateway -->
+    <div v-if="unassigned.length" class="card un-card">
+      <h4>Unassigned nodes</h4>
+      <p class="un-hint">These nodes belonged to a deleted gateway. They were not reset and still work with their saved settings. Give each one to a gateway (it must be in range of that gateway).</p>
+      <div v-for="n in unassigned" :key="n.id" class="un-row">
+        <div class="un-info">
+          <strong>{{ n.name || 'Node ' + n.deviceId }}</strong>
+          <span class="un-sub">Device {{ n.deviceId }}<template v-if="n.mac"> · {{ n.mac }}</template> · {{ n.modules }} module{{ n.modules === 1 ? '' : 's' }}<template v-if="n.fromGateway"> · from {{ n.fromGateway }}</template></span>
+        </div>
+        <select v-model="assignTo[n.id]" class="un-select">
+          <option value="" disabled>Choose a gateway</option>
+          <option v-for="g in store.gateways" :key="g.id" :value="g.id">{{ g.name }}{{ g.online ? '' : ' (offline)' }}</option>
+        </select>
+        <button class="btn btn-primary btn-sm" :disabled="!assignTo[n.id] || busyId === n.id" @click="assign(n)">{{ busyId === n.id ? 'Sending…' : 'Assign' }}</button>
+        <button class="btn btn-secondary btn-sm" :disabled="busyId === n.id" @click="forget(n)">Forget</button>
+      </div>
+      <p v-if="msg" :class="msgOk ? 'un-ok' : 'un-err'">{{ msg }}</p>
+    </div>
   </div>
 
   <!-- Delete confirmation modal -->
@@ -62,7 +81,7 @@
     <div class="modal">
       <h4>Delete Gateway</h4>
       <p>Delete gateway <strong>{{ deleteTargetName }}</strong>?</p>
-      <p class="modal-note">This will permanently remove the gateway and all its nodes. This cannot be undone.</p>
+      <p class="modal-note">The gateway is removed together with its displays, rules and saved Wi-Fi networks. Its nodes are not reset: they stay as unassigned nodes that you can give to another gateway.</p>
       <div class="modal-actions">
         <button @click="deleteTarget = null" class="btn btn-secondary" :disabled="deleting">Cancel</button>
         <button @click="doDelete" class="btn btn-danger" :disabled="deleting">{{ deleting ? 'Deleting…' : 'Delete' }}</button>
@@ -74,12 +93,48 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useGatewayStore } from '../stores/gateways'
+import api from '../services/api'
+import { confirmDialog } from '../services/dialog'
 
 const store = useGatewayStore()
 const loading = computed(() => store.loading)
 const deleteTarget = ref(null)
 const deleteTargetName = ref('')
 const deleting = ref(false)
+const unassigned = ref([])
+const assignTo = ref({})
+const busyId = ref(null)
+const msg = ref('')
+const msgOk = ref(true)
+
+async function loadUnassigned() {
+  try { unassigned.value = (await api.get('/nodes/unassigned')).data || [] } catch { unassigned.value = [] }
+}
+
+async function assign(n) {
+  busyId.value = n.id
+  msg.value = ''
+  try {
+    const { data } = await api.post(`/nodes/unassigned/${n.id}/assign`, { gatewayId: assignTo.value[n.id] })
+    msgOk.value = true
+    msg.value = data.message || 'Sent.'
+    setTimeout(loadUnassigned, 4000)
+  } catch (e) {
+    msgOk.value = false
+    msg.value = e.response?.data?.error || 'Could not assign the node'
+  } finally { busyId.value = null }
+}
+
+async function forget(n) {
+  const ok = await confirmDialog({
+    title: 'Forget this node?',
+    message: 'The saved settings are removed from the hub. The node keeps its own, and can still be paired again with its pairing code.',
+    confirmText: 'Forget',
+  })
+  if (!ok) return
+  await api.delete(`/nodes/unassigned/${n.id}`)
+  loadUnassigned()
+}
 
 function remove(gw) {
   deleteTargetName.value = gw.name
@@ -91,15 +146,25 @@ async function doDelete() {
   try {
     await store.remove(deleteTarget.value)
     deleteTarget.value = null
+    loadUnassigned()
   } finally {
     deleting.value = false
   }
 }
 
-onMounted(() => store.fetchAll())
+onMounted(() => { store.fetchAll(); loadUnassigned() })
 </script>
 
 <style scoped>
+.un-card { margin-top: 1.25rem; padding: 1.25rem; }
+.un-card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 4px; }
+.un-hint { font-size: 0.82rem; color: var(--c-muted); margin-bottom: 12px; }
+.un-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid var(--c-border); }
+.un-info { flex: 1 1 220px; display: flex; flex-direction: column; min-width: 0; }
+.un-sub { font-size: 0.78rem; color: var(--c-muted); }
+.un-select { min-width: 180px; }
+.un-ok { color: var(--c-ok-text); font-size: 0.85rem; margin-top: 8px; }
+.un-err { color: var(--c-danger); font-size: 0.85rem; margin-top: 8px; }
 .list-header {
   display:flex;
   justify-content:space-between;
