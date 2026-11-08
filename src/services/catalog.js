@@ -17,7 +17,7 @@ export const typeOf = (key) => catalog.value.find((t) => t.key === key)
 
 export function blankCap(key = 'digitalOutput') {
   const t = typeOf(key)
-  const cap = { type: key, pin: 0, pin2: 0, count: 0, ring: false, extra: 0, label: '' }
+  const cap = { type: key, pin: 0, pin2: 0, count: 0, ring: false, extra: 0, label: '', symbol: '' }
   for (const f of t?.fields || []) {
     if (f.key === 'ring') cap.ring = !!f.default
     else cap[f.key] = f.default
@@ -27,7 +27,7 @@ export function blankCap(key = 'digitalOutput') {
 
 // A list of caps as the hub stored it -> editable copies.
 export function editable(caps) {
-  return (caps || []).map((c) => ({ type: c.type, pin: c.pin || 0, pin2: c.pin2 || 0, count: c.count || 0, ring: !!c.ring, extra: c.extra || 0, label: c.label || '' }))
+  return (caps || []).map((c) => ({ type: c.type, pin: c.pin || 0, pin2: c.pin2 || 0, count: c.count || 0, ring: !!c.ring, extra: c.extra || 0, label: c.label || '', symbol: c.symbol || '' }))
 }
 
 // ...and back to what the hub accepts.
@@ -36,6 +36,7 @@ export function payload(caps) {
     const t = typeOf(c.type)
     const keys = new Set((t?.fields || []).map((f) => f.key))
     const out = { type: c.type, label: c.label || '' }
+    if (c.symbol) out.symbol = c.symbol
     if (keys.has('pin')) out.pin = Number(c.pin) || 0
     if (keys.has('pin2')) out.pin2 = Number(c.pin2) || 0
     if (keys.has('count')) out.count = Number(c.count) || 0

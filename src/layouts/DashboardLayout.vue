@@ -167,6 +167,7 @@ async function handleLogout() {
   transition:width 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .collapsed .sidebar { --w: 72px; }
+.sidebar { transition: width 0.2s ease; }
 
 .collapse-btn {
   position:absolute; top:22px; right:-13px; z-index:60;

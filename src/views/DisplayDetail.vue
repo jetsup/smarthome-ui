@@ -95,6 +95,12 @@
         </template>
       </div>
 
+      <!-- Lock-screen picture -->
+      <div class="card section">
+        <div class="section-header"><h4>Lock-screen picture</h4><span class="hint">Shown behind the clock when the display locks.</span></div>
+        <LockBackground :path="path" :version="hmi.lockBgVersion || 0" @changed="(v) => (hmi.lockBgVersion = v)" />
+      </div>
+
       <!-- Nodes -->
       <div class="card section">
         <div class="section-header">
@@ -140,6 +146,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../services/api'
 import { confirmDialog, notify } from '../services/dialog'
+import LockBackground from '../components/LockBackground.vue'
 
 const route = useRoute()
 const router = useRouter()

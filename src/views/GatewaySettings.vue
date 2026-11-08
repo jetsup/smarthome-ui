@@ -23,6 +23,49 @@
         </form>
       </div>
 
+      <!-- Data logging -->
+      <div class="card section">
+        <div class="section-header">
+          <h4>Data logging</h4>
+          <p class="hint">The gateway keeps every sensor reading with its time, so nothing is lost while the hub is unreachable. It sends them to the hub when it is back and then clears them. Time comes from the RTC module, else internet time, else the hub; with none of those it uses uptime and fixes the times once it knows the real one.</p>
+        </div>
+
+        <div v-if="log.status" class="log-status">
+          <span class="chip"><Icon name="clock" /> {{ timeSourceText }}</span>
+          <span class="chip"><Icon name="chip" /> RTC {{ ['not found', 'found, not set', 'working'][log.status.rtc] }}</span>
+          <span class="chip"><Icon name="layers" /> {{ log.status.pending }} waiting on the gateway</span>
+          <span class="chip"><Icon name="sparkle" /> storing on {{ log.status.sdCard ? 'the SD card' : 'flash' }}</span>
+        </div>
+        <p v-else class="hint">The gateway is offline: settings are saved and sent when it connects.</p>
+
+        <div class="log-form">
+          <label class="log-field">Store the data on
+            <select v-model.number="log.store">
+              <option :value="0">Gateway flash (default)</option>
+              <option :value="1">SD card</option>
+            </select>
+          </label>
+          <label class="log-field">Space limit (KB)
+            <input v-model.number="log.maxKb" type="number" min="32" :max="log.store === 1 ? 1048576 : 1024" step="32">
+            <small>When it is full the oldest data is overwritten. About {{ Math.round(log.maxKb * 1024 / 16) }} readings.</small>
+          </label>
+          <label v-if="log.store === 1" class="log-field">SD card chip-select (CS) pin
+            <input v-model.number="log.sdCs" type="number" min="0" max="39">
+          </label>
+          <label class="log-field">RTC SDA pin
+            <input v-model.number="log.rtcSda" type="number" min="0" max="39">
+          </label>
+          <label class="log-field">RTC SCL pin
+            <input v-model.number="log.rtcScl" type="number" min="0" max="39">
+          </label>
+        </div>
+        <div class="log-actions">
+          <button class="btn btn-primary" :disabled="logSaving" @click="saveLogging">{{ logSaving ? 'Saving…' : 'Save' }}</button>
+          <span class="hint">{{ log.storedOnHub }} readings stored on the hub.</span>
+        </div>
+        <p v-if="log.store === 1" class="hint">Wire the SD card to the gateway's SPI pins (SCK 18, MISO 19, MOSI 23) and the CS pin above. Changing where data is stored restarts the gateway.</p>
+      </div>
+
       <!-- Nodes -->
       <div class="card section">
         <div class="section-header">
@@ -98,7 +141,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGatewayStore } from '../stores/gateways'
 import api from '../services/api'
@@ -131,7 +174,36 @@ onMounted(async () => {
   loading.value = false
   nameInput.value = gw.value?.name || ''
   await fetchCredentials()
+  await fetchLogging()
+  logTimer = setInterval(fetchLogging, 10000)
 })
+onBeforeUnmount(() => clearInterval(logTimer))
+
+// ---- data logging ----
+let logTimer = null
+const log = reactive({ store: 0, maxKb: 256, sdCs: 5, rtcSda: 21, rtcScl: 22, storedOnHub: 0, status: null })
+const logSaving = ref(false)
+const timeSourceText = computed(() => ['No real time yet (uptime)', 'Time from the RTC module', 'Time from the hub', 'Time from the internet'][log.status?.timeSource || 0])
+async function fetchLogging() {
+  try {
+    const { data } = await api.get(`/gateways/${route.params.id}/logging`)
+    if (!logSaving.value && !logDirty) Object.assign(log, { store: data.store, maxKb: data.maxKb, sdCs: data.sdCs, rtcSda: data.rtcSda, rtcScl: data.rtcScl })
+    log.storedOnHub = data.storedOnHub
+    log.status = data.status || null
+  } catch { /* shown next time */ }
+}
+let logDirty = false
+watch(() => [log.store, log.maxKb, log.sdCs, log.rtcSda, log.rtcScl], () => { logDirty = true })
+async function saveLogging() {
+  logSaving.value = true
+  try {
+    const { data } = await api.put(`/gateways/${route.params.id}/logging`, { store: log.store, maxKb: log.maxKb, sdCs: log.sdCs, rtcSda: log.rtcSda, rtcScl: log.rtcScl })
+    logDirty = false
+    notify(data.applied ? 'Logging settings sent to the gateway.' : 'Saved. The gateway gets them when it connects.', 'ok')
+  } catch (e) {
+    notify(e.response?.data?.error || 'Could not save the settings', 'error')
+  } finally { logSaving.value = false }
+}
 
 async function fetchCredentials() {
   try {
@@ -389,6 +461,13 @@ async function deleteCred(cred) {
   padding:0.3rem 0.75rem;
   font-size:0.8rem;
 }
+.log-status { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--c-hover); color: var(--c-accent); border: 1px solid color-mix(in srgb, var(--c-accent) 25%, transparent); }
+.log-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+.log-field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--c-muted); }
+.log-field input, .log-field select { padding: 0.55rem 0.7rem; border: 1px solid var(--c-border); border-radius: 8px; background: var(--c-surface); color: var(--c-text); font-size: 0.9rem; font-family: inherit; }
+.log-field small { font-size: 11px; }
+.log-actions { display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
 .hint {
   color:var(--c-muted);
   font-size:0.8rem;

@@ -2,6 +2,7 @@
   <div class="cap-editor">
     <div v-for="(cap, i) in modelValue" :key="i" class="mod-row">
       <div class="mod-head">
+        <SymbolPicker v-model="cap.symbol" :fallback="defaultSymbol(cap.type)" />
         <select :value="cap.type" class="mod-type" @change="changeType(i, $event.target.value)">
           <optgroup v-for="g in groups" :key="g.label" :label="g.label">
             <option v-for="t in g.types" :key="t.key" :value="t.key">{{ t.label }}</option>
@@ -32,6 +33,7 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
+import SymbolPicker from './SymbolPicker.vue'
 import { catalog, loadCatalog, typeOf, blankCap } from '../services/catalog'
 
 const props = defineProps({ modelValue: { type: Array, required: true } })
@@ -50,10 +52,13 @@ function changeType(i, key) {
   const keep = props.modelValue[i].label
   const next = blankCap(key)
   next.label = keep
+  next.symbol = ''
   const list = [...props.modelValue]
   list[i] = next
   emit('update:modelValue', list)
 }
+const DEFAULTS = { digitalOutput: 'power', relay: 'plug', analogOutput: 'sliders', neopixel: 'lightbulb', buzzer: 'bell', dht: 'thermometer', ld2410: 'radar', ds3231: 'clock', analogInput: 'gauge', digitalInput: 'input' }
+const defaultSymbol = (t) => DEFAULTS[t] || 'chip'
 const add = () => emit('update:modelValue', [...props.modelValue, blankCap('digitalOutput')])
 const remove = (i) => emit('update:modelValue', props.modelValue.filter((_, k) => k !== i))
 </script>
