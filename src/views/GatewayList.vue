@@ -58,7 +58,7 @@
   </div>
 
   <!-- Delete confirmation modal -->
-  <div v-if="deleteTarget" class="modal-overlay" @click.self="deleteTarget = null">
+  <div v-if="deleteTarget" class="modal-overlay">
     <div class="modal">
       <h4>Delete Gateway</h4>
       <p>Delete gateway <strong>{{ deleteTargetName }}</strong>?</p>

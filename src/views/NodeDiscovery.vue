@@ -44,7 +44,7 @@
     </template>
 
     <!-- Gateway picker modal -->
-    <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+    <div v-if="showModal" class="modal-overlay">
       <div class="modal">
         <h4>Add Node</h4>
         <p>Device <code>{{ selectedNode?.deviceId }}</code> heard via <code>{{ selectedNode?.gatewayId }}</code></p>

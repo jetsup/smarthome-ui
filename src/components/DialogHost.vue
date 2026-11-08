@@ -1,5 +1,5 @@
 <template>
-  <div v-if="state.confirm" class="modal-overlay" role="presentation" @click.self="state.confirm.resolve(false)">
+  <div v-if="state.confirm" class="modal-overlay" role="presentation">
     <div class="modal" role="alertdialog" aria-modal="true" :aria-label="state.confirm.title">
       <div :class="['dlg-icon', { danger: state.confirm.danger }]">
         <svg viewBox="0 0 24 24" v-if="state.confirm.danger"><path d="M12 9v4M12 17h.01M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-2.9L13.7 3.9a2 2 0 0 0-3.4 0z" /></svg>

@@ -52,6 +52,12 @@ const routes = [
         meta: { title: 'Gateway Settings' },
       },
       {
+        path: 'nodes/:nodeId/settings',
+        name: 'NodeSettings',
+        component: () => import('../views/NodeSettings.vue'),
+        meta: { title: 'Node Settings' },
+      },
+      {
         path: 'activity',
         name: 'Activity',
         component: () => import('../views/Activity.vue'),

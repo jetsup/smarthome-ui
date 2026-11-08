@@ -57,19 +57,28 @@ const modules = computed(() => {
   return out
 })
 
-// Prefill each action's form once: catalog defaults, then the last setting the hub remembers.
-watch(modules, (list) => {
-  for (const m of list) {
+// Prefill each action's form: catalog defaults, then the last setting the hub remembers.
+// Whenever the remembered setting changes (another phone, the display, a rule...) the
+// form follows it, so every screen shows the real current preset.
+const seenEffects = {}
+const lastSend = {}
+function syncForms() {
+  for (const m of modules.value) {
+    const eff = props.node.effects?.[String(m.index)] || null
+    const sig = JSON.stringify(eff)
+    if (Date.now() - (lastSend[m.index] || 0) < 6000) continue // don't fight a change I just made
     for (const a of m.type.actions || []) {
       const k = m.index + ':' + a.key
-      if (forms[k]) continue
+      if (forms[k] && seenEffects[m.index] === sig) continue
       const f = {}
       for (const p of a.params || []) f[p.key] = p.default
-      Object.assign(f, props.node.effects?.[String(m.index)] || {})
+      Object.assign(f, eff || {})
       forms[k] = f
     }
+    seenEffects[m.index] = sig
   }
-}, { immediate: true })
+}
+watch([modules, () => JSON.stringify(props.node.effects)], syncForms, { immediate: true })
 
 const buttonLabel = (a) => ({ setEffect: 'Apply pattern', play: 'Play', syncTime: 'Set clock from the system time' }[a.key] || a.label)
 
@@ -81,6 +90,7 @@ function fmt(r) {
 
 async function send(m, a, params) {
   busy.value = true
+  lastSend[m.index] = Date.now()
   try {
     const { data } = await api.post(`/nodes/${props.node.nodeId}/action`, { cap: m.index, action: a.key, params })
     msgs[m.index] = { ok: true, text: data.status === 'saved_offline' ? data.message : 'Sent.' }

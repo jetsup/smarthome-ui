@@ -19,9 +19,12 @@
             Type: {{ typeLabel }}
           </p>
         </div>
-        <span :class="['badge', node.isOnline ? 'badge-online' : 'badge-offline']">
-          {{ node.isOnline ? 'Online' : 'Offline' }}
-        </span>
+        <div class="node-header-actions">
+          <span :class="['badge', node.isOnline ? 'badge-online' : 'badge-offline']">
+            {{ node.isOnline ? 'Online' : 'Offline' }}
+          </span>
+          <router-link :to="'/nodes/' + node.nodeId + '/settings'" class="btn btn-secondary btn-sm">Settings</router-link>
+        </div>
       </div>
 
       <!-- Status row -->
@@ -108,7 +111,7 @@
     </template>
 
     <!-- Edit Capabilities modal -->
-    <div v-if="showEditModal" class="modal-overlay" @click.self="showEditModal = false">
+    <div v-if="showEditModal" class="modal-overlay">
       <div class="modal modal-wide">
         <h4>Edit Capabilities</h4>
         <p>Configure capabilities for device <code>{{ node?.deviceId }}</code>.</p>
@@ -407,6 +410,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.node-header-actions { display: flex; gap: 10px; align-items: center; }
 .back-link {
   display:inline-block;
   color:var(--c-accent);

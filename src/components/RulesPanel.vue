@@ -16,7 +16,7 @@
       <button class="btn btn-danger btn-sm" @click="remove(r)">Delete</button>
     </div>
 
-    <div v-if="show" class="modal-overlay" @click.self="show = false">
+    <div v-if="show" class="modal-overlay">
       <div class="modal modal-wide">
         <h4>New rule</h4>
         <div class="form-group"><label>Name</label><input v-model="form.name" maxlength="40" placeholder="e.g. Humid → alarm" /></div>

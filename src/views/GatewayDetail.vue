@@ -140,7 +140,7 @@
       <RulesPanel :gateway-id="route.params.id" :nodes="nodes" />
 
       <!-- Add Binding modal -->
-      <div v-if="showAddBinding" class="modal-overlay" @click.self="showAddBinding = false">
+      <div v-if="showAddBinding" class="modal-overlay">
         <div class="modal">
           <h4>Add Capability Binding</h4>
           <p>When the source input changes, the target output is updated automatically.</p>
@@ -187,7 +187,7 @@
     </template>
 
     <!-- Link / Provision modal -->
-    <div v-if="showLinkModal" class="modal-overlay" @click.self="showLinkModal = false">
+    <div v-if="showLinkModal" class="modal-overlay">
       <div class="modal modal-wide">
         <h4>Provision Node</h4>
         <p>Configure device <code>{{ linkTarget?.deviceId }}</code> for gateway <strong>{{ gw?.name }}</strong>.</p>
@@ -213,7 +213,7 @@
     </div>
 
     <!-- Disconnect confirmation modal -->
-    <div v-if="showDisconnectModal" class="modal-overlay" @click.self="showDisconnectModal = false">
+    <div v-if="showDisconnectModal" class="modal-overlay">
       <div class="modal">
         <h4>Disconnect Node</h4>
         <p>Disconnect device <code>{{ disconnectTarget?.deviceId }}</code> from gateway <strong>{{ gw?.name }}</strong>?</p>

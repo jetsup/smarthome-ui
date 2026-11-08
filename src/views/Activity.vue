@@ -27,7 +27,14 @@
         </div>
         <time :title="new Date(i.createdAt).toLocaleString()">{{ ago(i.createdAt) }}</time>
       </div>
-      <button v-if="next" class="btn more" :disabled="loadingMore" @click="load(false)">{{ loadingMore ? 'Loading…' : 'Load older' }}</button>
+    </div>
+    <div v-if="!loading && total > 0" class="card pager">
+      <button class="btn btn-sm" :disabled="page <= 1" @click="go(page - 1)">&lsaquo; Previous</button>
+      <span class="pinfo">Page {{ page }} of {{ pages }} <small>· {{ total }} events</small></span>
+      <button class="btn btn-sm" :disabled="page >= pages" @click="go(page + 1)">Next &rsaquo;</button>
+      <select v-model.number="pageSize" class="psize" aria-label="Events per page" @change="load(true)">
+        <option :value="25">25 / page</option><option :value="50">50 / page</option><option :value="100">100 / page</option>
+      </select>
     </div>
   </div>
 </template>
@@ -38,21 +45,27 @@ import api from '../services/api'
 
 const cats = [{ k: '', l: 'All' }, { k: 'security', l: 'Security' }, { k: 'account', l: 'Account' }, { k: 'gateway', l: 'Gateways' },
   { k: 'node', l: 'Nodes' }, { k: 'display', l: 'Displays' }, { k: 'wifi', l: 'Wi-Fi' }]
-const items = ref([]); const next = ref(0); const loading = ref(true); const loadingMore = ref(false)
+const items = ref([]); const loading = ref(true)
+const page = ref(1); const pages = ref(1); const total = ref(0); const pageSize = ref(50)
 const category = ref(''); const q = ref(''); const failedOnly = ref(false)
 let t = null
 const debounce = () => { clearTimeout(t); t = setTimeout(() => load(true), 300) }
 const params = (extra = {}) => ({ category: category.value || undefined, q: q.value || undefined, outcome: failedOnly.value ? 'failed' : undefined, ...extra })
 
+// reset = filters changed: back to page 1
 async function load(reset) {
-  if (reset) { loading.value = true; next.value = 0 } else loadingMore.value = true
+  if (reset) page.value = 1
+  loading.value = true
   try {
-    const { data } = await api.get('/audit', { params: params({ limit: 50, before: reset ? undefined : next.value }) })
-    items.value = reset ? data.items : items.value.concat(data.items)
-    next.value = data.items.length === 50 ? data.next : 0
-  } catch { if (reset) items.value = [] }
-  loading.value = false; loadingMore.value = false
+    const { data } = await api.get('/audit', { params: params({ limit: pageSize.value, page: page.value }) })
+    items.value = data.items
+    total.value = data.total
+    pages.value = data.pages
+    if (page.value > data.pages) { page.value = data.pages; return load(false) }
+  } catch { items.value = []; total.value = 0; pages.value = 1 }
+  loading.value = false
 }
+function go(p) { page.value = Math.min(Math.max(1, p), pages.value); load(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 async function exportCsv() {
   const { data } = await api.get('/audit', { params: params({ format: 'csv' }), responseType: 'blob' })
   const a = document.createElement('a'); a.href = URL.createObjectURL(data); a.download = 'smarthome-audit.csv'; a.click(); URL.revokeObjectURL(a.href)
@@ -88,5 +101,7 @@ onMounted(() => load(true))
 .line2 { font-size: 13px; color: var(--text); word-break: break-word; }
 .line3 { font-size: 12px; color: var(--text-muted); display: flex; gap: 6px; flex-wrap: wrap; }
 time { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
-.more { margin: 12px auto; display: block; }
+.pager { padding: 10px 14px; display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.pinfo { font-size: 13px; } .pinfo small { color: var(--text-muted); }
+.psize { width: auto; }
 </style>

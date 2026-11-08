@@ -22,6 +22,17 @@
         </form>
       </div>
 
+      <!-- Nodes -->
+      <div class="card section">
+        <div class="section-header">
+          <h4>Nodes</h4>
+          <p class="hint">Actions for every node on this gateway. Pairing and saved settings are kept.</p>
+        </div>
+        <button class="btn btn-secondary" :disabled="restarting" @click="restartNodes">
+          {{ restarting ? 'Restarting…' : 'Restart all nodes' }}
+        </button>
+      </div>
+
       <!-- WiFi: Saved networks (priority order) -->
       <div class="card section">
         <div class="section-header">
@@ -112,6 +123,25 @@ async function fetchCredentials() {
     credentials.value = Array.isArray(data) ? data : []
   } catch {
     // ignore
+  }
+}
+
+const restarting = ref(false)
+async function restartNodes() {
+  const ok = await confirmDialog({
+    title: 'Restart all nodes?',
+    message: 'Every node on this gateway restarts for a few seconds. Their settings and pairing are kept.',
+    confirmText: 'Restart',
+  })
+  if (!ok) return
+  restarting.value = true
+  try {
+    const { data } = await api.post(`/gateways/${route.params.id}/restart-nodes`)
+    notify(data.count ? `Restarting ${data.count} node${data.count === 1 ? '' : 's'}…` : 'This gateway has no nodes yet.', 'ok')
+  } catch (e) {
+    notify(e.response?.data?.error || 'Could not restart the nodes', 'error')
+  } finally {
+    restarting.value = false
   }
 }
 

@@ -56,6 +56,16 @@
           <input type="range" min="10" max="100" step="5" v-model.number="brightness" @change="setLook({ brightness })" />
         </div>
         <div class="ap-row">
+          <span>Screen off after <small>saves power</small></span>
+          <select :value="hmi.sleepAfter || 0" @change="setLook({ sleepAfter: Number($event.target.value) })">
+            <option v-for="o in sleepOptions" :key="o[0]" :value="o[0]">{{ o[1] }}</option>
+          </select>
+        </div>
+        <div class="ap-row">
+          <span>RGB light with the screen</span>
+          <label class="check"><input type="checkbox" :checked="hmi.ledSleepOff !== false" @change="setLook({ ledSleepOff: $event.target.checked })" /> Turn off when the screen turns off</label>
+        </div>
+        <div class="ap-row">
           <span>RGB light <small>onboard LED</small></span>
           <label class="check"><input type="checkbox" :checked="hmi.statusLed !== false" @change="setLook({ statusLed: $event.target.checked })" /> On</label>
         </div>
@@ -163,6 +173,7 @@ function pageIsLight() {
 // A white accent is unreadable on a light page, so it shows (and is drawn) as near-black.
 function shownAccent(a) { return a === 'FFFFFF' && pageIsLight() ? '111418' : a }
 
+const sleepOptions = [[0, 'Never'], [15, '15 seconds'], [30, '30 seconds'], [60, '1 minute'], [120, '2 minutes'], [300, '5 minutes'], [600, '10 minutes'], [1800, '30 minutes']]
 const accents = ['00A8E8', '3FB950', 'F0A030', 'A371F7', 'F85149', 'E85D9A', '14B8A6', 'FFFFFF']
 
 const path = `/hmis/${route.params.id}`
