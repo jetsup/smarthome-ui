@@ -38,8 +38,8 @@ export const useGatewayStore = defineStore('gateways', {
       return data
     },
 
-    async remove(id) {
-      await api.delete(`/gateways/${id}`)
+    async remove(id, password) {
+      await api.delete(`/gateways/${id}`, { data: { password } })
       this.gateways = this.gateways.filter((g) => g.id !== id)
     },
 

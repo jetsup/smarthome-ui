@@ -42,7 +42,7 @@
       <div class="card section">
         <div class="section-header">
           <h4>Delete gateway</h4>
-          <p class="hint">Removes this gateway with its displays, rules and saved Wi-Fi networks. Its nodes are not reset: they stay as unassigned nodes on the Gateways page, ready to be given to another gateway.</p>
+          <p class="hint">Removes this gateway with its displays, rules and saved Wi-Fi networks. Online nodes are unpaired so any gateway nearby can discover them. Nodes that cannot be reached are kept as unassigned nodes on the Gateways page. Asks for your password.</p>
         </div>
         <button class="btn btn-danger" :disabled="deleting" @click="deleteGateway">{{ deleting ? 'Deleting…' : 'Delete gateway' }}</button>
       </div>
@@ -147,14 +147,17 @@ const reloading = ref(false)
 async function deleteGateway() {
   const ok = await confirmDialog({
     title: 'Delete this gateway?',
-    message: `${gw.value.name} is removed. Its nodes are kept as unassigned nodes and are not reset.`,
+    message: `${gw.value.name} is removed. Nodes that are online are unpaired so any gateway can discover them. Nodes that cannot be reached are kept as unassigned nodes.`,
+    note: 'Enter your password to confirm.',
     confirmText: 'Delete',
+    danger: true,
+    password: true,
   })
   if (!ok) return
   deleting.value = true
   try {
-    await store.remove(route.params.id)
-    notify('Gateway deleted. Its nodes are kept as unassigned.', 'ok')
+    await store.remove(route.params.id, ok)
+    notify('Gateway deleted.', 'ok')
     router.push('/gateways')
   } catch (e) {
     notify(e.response?.data?.error || 'Could not delete the gateway', 'error')

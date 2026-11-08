@@ -4,7 +4,8 @@ import { reactive } from 'vue'
 export const dialogState = reactive({ confirm: null, toasts: [] })
 let nextId = 1
 
-/** await confirmDialog({ title, message, note, confirmText, cancelText, danger }) -> boolean */
+/** await confirmDialog({ title, message, note, confirmText, cancelText, danger, password }) -> boolean,
+ *  or the typed password (string) when `password: true` */
 export function confirmDialog(opts) {
   return new Promise((resolve) => {
     dialogState.confirm = {

@@ -37,6 +37,15 @@
         </div>
       </div>
 
+      <!-- Unpair -->
+      <div class="card section">
+        <div class="section-header">
+          <h4>Unpair</h4>
+          <p class="hint">The node forgets this gateway and its settings and is removed here. Afterwards any gateway in range can discover and pair it again.</p>
+        </div>
+        <button class="btn btn-danger" :disabled="unpairing" @click="unpair">{{ unpairing ? 'Unpairing…' : 'Unpair node' }}</button>
+      </div>
+
       <!-- Maintenance -->
       <div class="card section">
         <div class="section-header">
@@ -65,12 +74,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import QRCode from 'qrcode'
 import api from '../services/api'
 import { confirmDialog, notify } from '../services/dialog'
 
 const route = useRoute()
+const router = useRouter()
 const node = ref(null)
 const loading = ref(true)
 const nameInput = ref('')
@@ -79,6 +89,7 @@ const nameMsg = ref('')
 const nameOk = ref(false)
 const restarting = ref(false)
 const reloading = ref(false)
+const unpairing = ref(false)
 const qr = ref('')
 const nameChanged = computed(() => !!node.value && nameInput.value.trim() !== (node.value.name || ''))
 
@@ -109,6 +120,24 @@ async function saveName() {
     nameOk.value = false
     nameMsg.value = e.response?.data?.error || 'Could not rename'
   } finally { saving.value = false }
+}
+
+async function unpair() {
+  const ok = await confirmDialog({
+    title: 'Unpair this node?',
+    message: 'It is reset and removed from this gateway, together with its rules and bindings. Any gateway in range can then discover it.',
+    confirmText: 'Unpair',
+    danger: true,
+  })
+  if (!ok) return
+  unpairing.value = true
+  try {
+    await api.post(`/nodes/${route.params.nodeId}/unpair`)
+    notify('The node was unpaired', 'ok')
+    router.push('/gateways/' + node.value.gatewayId)
+  } catch (e) {
+    notify(e.response?.data?.error || 'Could not unpair the node', 'error')
+  } finally { unpairing.value = false }
 }
 
 async function reload() {

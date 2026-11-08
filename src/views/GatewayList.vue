@@ -81,10 +81,16 @@
     <div class="modal">
       <h4>Delete Gateway</h4>
       <p>Delete gateway <strong>{{ deleteTargetName }}</strong>?</p>
-      <p class="modal-note">The gateway is removed together with its displays, rules and saved Wi-Fi networks. Its nodes are not reset: they stay as unassigned nodes that you can give to another gateway.</p>
+      <p class="modal-note">The gateway is removed together with its displays, rules and saved Wi-Fi networks.</p>
+      <p class="modal-note">Nodes that are online are unpaired so any gateway can discover them. Nodes that cannot be reached are kept as unassigned nodes.</p>
+      <div class="form-group">
+        <label for="del-pw">Your password</label>
+        <input id="del-pw" v-model="deletePw" type="password" autocomplete="current-password" @keyup.enter="deletePw && doDelete()" />
+      </div>
+      <p v-if="deleteErr" class="un-err">{{ deleteErr }}</p>
       <div class="modal-actions">
         <button @click="deleteTarget = null" class="btn btn-secondary" :disabled="deleting">Cancel</button>
-        <button @click="doDelete" class="btn btn-danger" :disabled="deleting">{{ deleting ? 'Deleting…' : 'Delete' }}</button>
+        <button @click="doDelete" class="btn btn-danger" :disabled="deleting || !deletePw">{{ deleting ? 'Deleting…' : 'Delete' }}</button>
       </div>
     </div>
   </div>
@@ -101,6 +107,8 @@ const loading = computed(() => store.loading)
 const deleteTarget = ref(null)
 const deleteTargetName = ref('')
 const deleting = ref(false)
+const deletePw = ref('')
+const deleteErr = ref('')
 const unassigned = ref([])
 const assignTo = ref({})
 const busyId = ref(null)
@@ -137,6 +145,8 @@ async function forget(n) {
 }
 
 function remove(gw) {
+  deletePw.value = ''
+  deleteErr.value = ''
   deleteTargetName.value = gw.name
   deleteTarget.value = gw.id
 }
@@ -144,9 +154,11 @@ function remove(gw) {
 async function doDelete() {
   deleting.value = true
   try {
-    await store.remove(deleteTarget.value)
+    await store.remove(deleteTarget.value, deletePw.value)
     deleteTarget.value = null
     loadUnassigned()
+  } catch (e) {
+    deleteErr.value = e.response?.data?.error || 'Could not delete the gateway'
   } finally {
     deleting.value = false
   }

@@ -8,9 +8,13 @@
       <h4>{{ state.confirm.title }}</h4>
       <p v-if="state.confirm.message">{{ state.confirm.message }}</p>
       <p v-if="state.confirm.note" class="modal-note">{{ state.confirm.note }}</p>
+      <div v-if="state.confirm.password" class="form-group" style="margin-top:12px">
+        <label for="dlg-pw">Your password</label>
+        <input id="dlg-pw" ref="pwInput" v-model="pw" type="password" autocomplete="current-password" @keyup.enter="okClick" />
+      </div>
       <div class="modal-actions">
         <button class="btn btn-secondary" @click="state.confirm.resolve(false)">{{ state.confirm.cancelText }}</button>
-        <button ref="okBtn" :class="['btn', state.confirm.danger ? 'btn-danger-solid' : 'btn-primary']" @click="state.confirm.resolve(true)">{{ state.confirm.confirmText }}</button>
+        <button ref="okBtn" :class="['btn', state.confirm.danger ? 'btn-danger-solid' : 'btn-primary']" @click="okClick" :disabled="state.confirm.password && !pw">{{ state.confirm.confirmText }}</button>
       </div>
     </div>
   </div>
@@ -28,7 +32,18 @@ import { watch, nextTick, ref, onMounted, onUnmounted } from 'vue'
 import { dialogState as state, dismissToast } from '../services/dialog'
 
 const okBtn = ref(null)
-watch(() => state.confirm, async (c) => { if (c) { await nextTick(); okBtn.value?.focus() } })
+const pwInput = ref(null)
+const pw = ref('')
+watch(() => state.confirm, async (c) => {
+  pw.value = ''
+  if (c) { await nextTick(); (c.password ? pwInput.value : okBtn.value)?.focus() }
+})
+// With `password: true` the dialog resolves with what was typed.
+function okClick() {
+  const c = state.confirm
+  if (!c || (c.password && !pw.value)) return
+  c.resolve(c.password ? pw.value : true)
+}
 
 // Esc closes the top-most dialog (confirm, or any page modal via its overlay).
 function onKey(e) {
