@@ -1,6 +1,6 @@
 <template>
   <div class="fade-in">
-    <router-link to="/gateways" class="back-link">&larr; Back to Gateways</router-link>
+    <router-link to="/gateways" class="back-link"><Icon name="arrow-left" /> Back to Gateways</router-link>
 
     <div v-if="initialLoading" class="state-msg">Loading…</div>
 
@@ -44,7 +44,7 @@
       <div class="card section settings-card" @click="$router.push('/gateways/' + gw.id + '/settings')">
         <div class="section-header">
           <h4>Settings</h4>
-          <span class="chevron">&rsaquo;</span>
+          <span class="chevron"><Icon name="chevron-right" /></span>
         </div>
         <p class="settings-desc">WiFi, device configuration, and more.</p>
       </div>
@@ -75,7 +75,6 @@
               <th>Node ID</th>
               <th>Device ID</th>
               <th>API Key</th>
-              <th>Value</th>
               <th>Status</th>
               <th>Last Seen</th>
               <th>Actions</th>
@@ -89,7 +88,6 @@
               <td><code>{{ item.nodeId || '—' }}</code></td>
               <td><code>{{ item.deviceId }}</code></td>
               <td><code class="api-key">{{ item.apiKey ? maskedAPIKey(item.apiKey) : item.provisioning ? 'provisioning…' : '—' }}</code></td>
-              <td>{{ item.value != null ? item.value : (item.provisioning ? 'awaiting first report' : '—') }}</td>
               <td>
                 <span :class="['badge', badgeClass(item)]">
                   {{ badgeLabel(item) }}
@@ -99,6 +97,7 @@
               <td class="action-cell" @click.stop>
                 <button v-if="item.provisioning" class="btn btn-secondary btn-sm" disabled>Provisioning…</button>
                 <button v-else-if="item.linked && !item.inDiscovery" @click="confirmDisconnect(item)" class="btn btn-danger btn-sm">Disconnect</button>
+                <button v-else-if="item.linked" @click="restoreNode(item)" class="btn btn-primary btn-sm" title="This node was reset. Pair it again with the settings saved here.">Re-pair</button>
                 <button v-else @click="confirmLink(item)" class="btn btn-primary btn-sm">Connect</button>
               </td>
             </tr>
@@ -193,6 +192,18 @@
         <p>Configure device <code>{{ linkTarget?.deviceId }}</code> for gateway <strong>{{ gw?.name }}</strong>.</p>
 
         <div class="prov-form">
+          <div v-if="linkTarget?.paired" class="form-group">
+            <label for="node-code">Pairing code</label>
+            <input id="node-code" v-model="provCode" placeholder="8 letters and digits" maxlength="16" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:.12em" />
+            <p class="modal-note">This node is already paired to a gateway. Enter the code from its Settings page (or its QR code) to move it here.</p>
+          </div>
+
+          <div v-if="!linkTarget?.linked" class="form-group">
+            <label for="adopt-code">Take over a previous node <small>(optional)</small></label>
+            <input id="adopt-code" v-model="adoptCode" placeholder="Pairing code of the node it replaces" maxlength="16" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:.12em" />
+            <p class="modal-note">Enter the code of an earlier node to copy its name, modules, display and rules to this one. Its modules are used instead of the ones below.</p>
+          </div>
+
           <div class="form-group">
             <label for="node-name">Node Name</label>
             <input id="node-name" v-model="provName" placeholder="e.g. Living Room Sensor" />
@@ -263,6 +274,8 @@ const showLinkModal = ref(false)
 const linkTarget = ref(null)
 const linking = ref(false)
 const linkConflict = ref('')
+const provCode = ref('')
+const adoptCode = ref('')
 const provName = ref('')
 const provCaps = ref([])
 
@@ -379,7 +392,7 @@ const combined = computed(() => {
     })
     .map(d => {
       const did = typeof d === 'number' ? d : d.deviceId
-      return { deviceId: did, linked: false, inDiscovery: true, value: null, isOnline: null, lastSeen: null, nodeId: null }
+      return { deviceId: did, linked: false, inDiscovery: true, paired: !!d.paired, value: null, isOnline: null, lastSeen: null, nodeId: null }
     })
 
   // Add pending provisioning items
@@ -555,7 +568,7 @@ const ESP32_ADC2 = new Set([0,2,4,12,13,14,15,25,26,27])
 const ESP32_INPUT_ONLY = new Set([34,35,36,39])
 
 function pinLabel(pin, type) {
-  if (pin === 0) return '— Select pin —'
+  if (pin === 0) return 'Select pin'
   const hints = []
   if (ESP32_ADC2.has(pin) && (type === 'analogInput' || type === 'analogOutput')) hints.push('ADC2, conflicts with Wi-Fi')
   if (ESP32_INPUT_ONLY.has(pin) && (type === 'digitalOutput' || type === 'analogOutput' || type === 'relay')) hints.push('input only')
@@ -586,26 +599,40 @@ function addCap() {
 function confirmLink(item) {
   linkTarget.value = item
   linkConflict.value = ''
+  provCode.value = ''
+  adoptCode.value = ''
   provName.value = ''
   provCaps.value = [blankCap()]
   showLinkModal.value = true
 }
 
+// A node that was reset or re-flashed: pair it again with what the hub saved.
+async function restoreNode(item) {
+  provisioningIds.value.add(item.deviceId)
+  try {
+    await store.provisionNode(route.params.id, item.deviceId, false, '', [], '')
+    addToast(`Node ${item.deviceId} is being paired again with its saved settings`)
+  } catch (e) {
+    provisioningIds.value.delete(item.deviceId)
+    addToast('Failed: ' + (e.response?.data?.error || e.message), 'error')
+  }
+}
+
 async function doLink() {
   linking.value = true
   const deviceId = linkTarget.value.deviceId
-  const force = !!linkConflict.value
   provisioningIds.value.add(deviceId)
   try {
     const caps = payload(provCaps.value)
-    await store.provisionNode(route.params.id, deviceId, force, provName.value, caps)
+    await store.provisionNode(route.params.id, deviceId, false, provName.value, adoptCode.value.trim() ? [] : caps, provCode.value, adoptCode.value)
     addToast(`Node ${deviceId} linking in progress`)
     showLinkModal.value = false
   } catch (e) {
     provisioningIds.value.delete(deviceId)
     const errData = e.response?.data
-    if (errData?.status === 'gateway_conflict') {
-      linkConflict.value = errData.message || 'This node is linked to another gateway.'
+    if (errData?.status === 'code_required' || errData?.status === 'code_invalid') {
+      linkTarget.value = { ...linkTarget.value, paired: true }
+      linkConflict.value = errData.error
     } else {
       addToast('Failed to link: ' + (errData?.error || e.message), 'error')
       showLinkModal.value = false

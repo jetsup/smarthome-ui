@@ -8,7 +8,7 @@
           </optgroup>
         </select>
         <input v-model="cap.label" class="mod-label" maxlength="10" placeholder="Label" />
-        <button v-if="modelValue.length > 1" type="button" class="btn btn-secondary btn-sm" aria-label="Remove" @click="remove(i)">&times;</button>
+        <button v-if="modelValue.length > 1" type="button" class="btn btn-secondary btn-sm" aria-label="Remove" @click="remove(i)"><Icon name="x" /></button>
       </div>
       <p v-if="typeOf(cap.type)?.hint" class="mod-hint">{{ typeOf(cap.type).hint }}</p>
       <div class="mod-fields">

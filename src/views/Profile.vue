@@ -118,7 +118,7 @@
           <p class="hint">If you lose your phone, each of these signs you in once. They are shown <strong>only now</strong>.</p>
           <div class="codes"><code v-for="c in newCodes" :key="c">{{ c }}</code></div>
           <div class="actions">
-            <button class="btn btn-secondary" @click="copyCodes">{{ copied ? 'Copied ✓' : 'Copy' }}</button>
+            <button class="btn btn-secondary" @click="copyCodes">{{ copied ? 'Copied' : 'Copy' }}</button>
             <button class="btn btn-secondary" @click="downloadCodes">Download .txt</button>
           </div>
           <label class="check"><input v-model="saved" type="checkbox" /> I've saved these codes somewhere safe</label>
@@ -152,7 +152,7 @@
               <small>{{ [(p.manufacturer + ' ' + p.model).trim(), p.os].filter(Boolean).join(' · ') }} · last active {{ ago(p.lastSeen) }}</small>
             </div>
             <button class="btn btn-danger btn-sm" :disabled="me.methods.phone && me.phones.length <= 1" @click="removePhone(p)"
-              :title="me.methods.phone && me.phones.length <= 1 ? 'Your only phone — turn off app approval first' : 'Remove this phone'">Remove</button>
+              :title="me.methods.phone && me.phones.length <= 1 ? 'Your only phone. Turn off app approval first' : 'Remove this phone'">Remove</button>
           </div>
         </div>
       </section>

@@ -1,6 +1,6 @@
 <template>
   <div class="fade-in">
-    <router-link :to="backLink" class="back-link">&larr; Back to {{ gatewayName ? `“${gatewayName}”` : 'gateway' }}</router-link>
+    <router-link :to="backLink" class="back-link"><Icon name="arrow-left" /> Back to {{ gatewayName ? `“${gatewayName}”` : 'gateway' }}</router-link>
 
     <div v-if="initialLoading" class="state-msg">Loading…</div>
 
@@ -326,7 +326,7 @@ const ESP32_ADC2 = new Set([0,2,4,12,13,14,15,25,26,27])
 const ESP32_INPUT_ONLY = new Set([34,35,36,39])
 
 function pinLabel(pin, type) {
-  if (pin === 0) return '— Select pin —'
+  if (pin === 0) return 'Select pin'
   const hints = []
   if (ESP32_ADC2.has(pin) && (type === 'analogInput' || type === 'analogOutput')) hints.push('ADC2, conflicts with Wi-Fi')
   if (ESP32_INPUT_ONLY.has(pin) && (type === 'digitalOutput' || type === 'analogOutput' || type === 'relay')) hints.push('input only')

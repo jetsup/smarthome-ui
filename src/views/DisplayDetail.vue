@@ -1,6 +1,6 @@
 <template>
   <div class="fade-in">
-    <router-link to="/displays" class="back-link">&larr; Back to Displays</router-link>
+    <router-link to="/displays" class="back-link"><Icon name="arrow-left" /> Back to Displays</router-link>
 
     <div v-if="loading" class="state-msg">Loading…</div>
     <div v-else-if="!hmi" class="card section">{{ error || 'Display not found.' }}</div>
@@ -9,7 +9,7 @@
       <div class="head">
         <div>
           <h3 class="page-title">{{ hmi.name }}</h3>
-          <p class="hint">Gateway: <strong>{{ hmi.gatewayName }}</strong> · Display ID {{ hmi.deviceId.slice(-4) }}</p>
+          <p class="hint">Gateway: <strong>{{ hmi.gatewayName }}</strong> · Display ID {{ hmi.deviceId.slice(-4) }} · MAC <code>{{ hmi.mac || hmi.deviceId }}</code></p>
         </div>
         <span :class="['badge', hmi.online ? 'badge-online' : 'badge-offline']">{{ hmi.online ? 'Online' : 'Offline' }}</span>
       </div>

@@ -18,7 +18,7 @@
           <tr><th>Name</th><th>ID</th><th>Nodes</th><th>Status</th><th></th></tr>
         </thead>
         <tbody>
-          <tr v-for="gw in store.gateways" :key="gw.id">
+          <tr v-for="gw in store.gateways" :key="gw.id" class="clickable" @click="$router.push(`/gateways/${gw.id}`)">
             <td>
               <router-link :to="`/gateways/${gw.id}`" class="gw-name">{{ gw.name }}</router-link>
             </td>
@@ -29,7 +29,7 @@
                 {{ gw.online ? 'Online' : 'Offline' }}
               </span>
             </td>
-            <td>
+            <td @click.stop>
               <button class="btn btn-danger btn-sm" @click="remove(gw)">Delete</button>
             </td>
           </tr>
@@ -132,6 +132,8 @@ onMounted(() => store.fetchAll())
   border-bottom:1px solid var(--c-border);
 }
 
+.gw-table tr.clickable { cursor:pointer; }
+.gw-table tr.clickable:hover td { background:var(--surface-2, rgba(128,128,128,.08)); }
 .gw-table td {
   padding:0.75rem 1rem;
   border-top:1px solid var(--c-surface-2);

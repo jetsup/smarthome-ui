@@ -3,9 +3,9 @@
     <section class="hero">
       <div class="hero-bg"></div>
       <div class="hero-content">
-        <span class="hero-badge">v2.0 — ESP32 Mesh Network</span>
+        <span class="hero-badge">ESP32 Mesh Network v2.0</span>
         <h1>Control your<br/><span class="highlight">Smart Home</span></h1>
-        <p class="hero-sub">A centralized hub for your ESP32 mesh network. Monitor nodes, send commands, and manage gateways — all from one dashboard.</p>
+        <p class="hero-sub">A centralized hub for your ESP32 mesh network. Monitor nodes, send commands, and manage gateways, all from one dashboard.</p>
         <div class="hero-cta">
           <router-link to="/register" class="btn btn-primary btn-lg">Get Started Free</router-link>
           <router-link to="/about" class="btn btn-secondary btn-lg">Learn More</router-link>
@@ -23,34 +23,34 @@
       <h2>Everything you need to manage your mesh</h2>
       <div class="features-grid">
         <div class="feature-card">
-          <div class="feature-icon">&#9889;</div>
+          <div class="feature-icon"><Icon name="bolt" /></div>
           <h3>Real-Time Control</h3>
           <p>Send commands to any node in your mesh network with sub-second latency. Toggle lights, read sensors, and more.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">&#128274;</div>
+          <div class="feature-icon"><Icon name="lock" /></div>
           <h3>Secure by Design</h3>
           <p>Each gateway is authenticated with a unique API key. All communication is encrypted and authorized via JWT.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">&#9729;</div>
+          <div class="feature-icon"><Icon name="cloud" /></div>
           <h3>Zero-Touch Setup</h3>
           <p>Provision new gateways in minutes using the captive portal flow. No technical skills required.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">&#128200;</div>
+          <div class="feature-icon"><Icon name="chart" /></div>
           <h3>Multi-User Dashboard</h3>
           <p>Every user gets an isolated workspace. Register gateways, monitor nodes, and track activity with full audit logs.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">&#128279;</div>
+          <div class="feature-icon"><Icon name="link" /></div>
           <h3>ESP-NOW Mesh</h3>
           <p>Leverages ESP-NOW for low-power, connectionless communication between nodes. No WiFi required on end devices.</p>
         </div>
         <div class="feature-card">
-          <div class="feature-icon">&#128218;</div>
+          <div class="feature-icon"><Icon name="book" /></div>
           <h3>Open Source</h3>
-          <p>Fully open-source stack. Go backend, Vue frontend, and Arduino firmware — all customizable to your needs.</p>
+          <p>Fully open-source stack. Go backend, Vue frontend, and Arduino firmware, all customizable to your needs.</p>
         </div>
       </div>
     </section>
@@ -64,13 +64,13 @@
           <h3>Provision</h3>
           <p>Create a gateway in your dashboard. A unique API key is generated for secure authentication.</p>
         </div>
-        <div class="step-arrow">&rarr;</div>
+        <div class="step-arrow"><Icon name="arrow-right" /></div>
         <div class="step">
           <div class="step-num">2</div>
           <h3>Connect</h3>
           <p>The gateway connects to your WiFi and establishes a secure TCP link to the hub.</p>
         </div>
-        <div class="step-arrow">&rarr;</div>
+        <div class="step-arrow"><Icon name="arrow-right" /></div>
         <div class="step">
           <div class="step-num">3</div>
           <h3>Control</h3>

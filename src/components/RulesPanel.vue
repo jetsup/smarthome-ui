@@ -19,7 +19,7 @@
     <div v-if="show" class="modal-overlay">
       <div class="modal modal-wide">
         <h4>New rule</h4>
-        <div class="form-group"><label>Name</label><input v-model="form.name" maxlength="40" placeholder="e.g. Humid → alarm" /></div>
+        <div class="form-group"><label>Name</label><input v-model="form.name" maxlength="40" placeholder="e.g. Humid alarm" /></div>
 
         <h5>When…</h5>
         <div class="row">
@@ -173,7 +173,7 @@ function describe(r) {
   const ch = typeOf(sc?.type)?.channels?.find((c) => c.id === r.channel)
   let act = ''
   try { act = JSON.parse(r.onTrue || '{}').action || '' } catch { /* */ }
-  return `When ${s?.name || r.sourceDeviceId} · ${sc?.label || sc?.type} · ${ch?.label || 'reading'} ${r.op} ${r.threshold}${ch?.unit ? ' ' + ch.unit : ''} → ${t?.name || r.targetDeviceId} · ${tc?.label || tc?.type} (${act})`
+  return `When ${s?.name || r.sourceDeviceId} · ${sc?.label || sc?.type} · ${ch?.label || 'reading'} ${r.op} ${r.threshold}${ch?.unit ? ' ' + ch.unit : ''}, then ${t?.name || r.targetDeviceId} · ${tc?.label || tc?.type} (${act})`
 }
 </script>
 

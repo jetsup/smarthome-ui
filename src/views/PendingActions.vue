@@ -40,7 +40,7 @@
             <span :class="['badge', statusClass(a.status)]">{{ a.status }}</span>
           </div>
           <div class="mobile-card-row cell-muted">
-            <span v-if="a.gatewayName">{{ a.gatewayName }} — </span>
+            <span v-if="a.gatewayName">{{ a.gatewayName }}: </span>
             <code>{{ a.targetId }}</code>
           </div>
           <div class="mobile-card-row cell-muted">{{ formatDate(a.createdAt) }}</div>

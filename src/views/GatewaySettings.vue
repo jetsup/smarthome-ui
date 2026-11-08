@@ -1,11 +1,12 @@
 <template>
   <div class="fade-in">
-    <router-link :to="'/gateways/' + $route.params.id" class="back-link">&larr; Back to Gateway</router-link>
+    <router-link :to="'/gateways/' + $route.params.id" class="back-link"><Icon name="arrow-left" /> Back to Gateway</router-link>
 
     <div v-if="loading" class="state-msg">Loading…</div>
 
     <template v-else-if="gw">
-      <h3 class="page-title">{{ gw.name }} — Settings</h3>
+      <h3 class="page-title">{{ gw.name }} settings</h3>
+      <p class="hint">Hardware address (MAC): <code>{{ gw.mac || 'not reported yet' }}</code> · ID <code>{{ gw.id }}</code></p>
 
       <!-- Gateway name -->
       <div class="card section">
@@ -31,6 +32,10 @@
         <button class="btn btn-secondary" :disabled="restarting" @click="restartNodes">
           {{ restarting ? 'Restarting…' : 'Restart all nodes' }}
         </button>
+        <button class="btn btn-secondary" :disabled="reloading" style="margin-left:8px" @click="reloadNodes">
+          {{ reloading ? 'Sending…' : 'Reload saved settings on all nodes' }}
+        </button>
+        <p class="hint">Reload sends every node its saved name, modules and key again, for nodes that were erased or re-flashed.</p>
       </div>
 
       <!-- WiFi: Saved networks (priority order) -->
@@ -49,8 +54,8 @@
               <span class="cred-pass">{{ i === 0 ? 'Preferred · ' : '' }}{{ cred.password ? cred.password[0] + '••••••' : 'Open network' }}</span>
             </div>
             <div class="row-actions">
-              <button class="btn btn-sm icon-btn" :disabled="i === 0 || busy" @click="move(i, -1)" title="Higher priority">▲</button>
-              <button class="btn btn-sm icon-btn" :disabled="i === credentials.length - 1 || busy" @click="move(i, 1)" title="Lower priority">▼</button>
+              <button class="btn btn-sm icon-btn" :disabled="i === 0 || busy" @click="move(i, -1)" title="Higher priority"><Icon name="chevron-up" /></button>
+              <button class="btn btn-sm icon-btn" :disabled="i === credentials.length - 1 || busy" @click="move(i, 1)" title="Lower priority"><Icon name="chevron-down" /></button>
               <button class="btn btn-danger btn-sm" @click="deleteCred(cred)">Forget</button>
             </div>
           </div>
@@ -127,6 +132,25 @@ async function fetchCredentials() {
 }
 
 const restarting = ref(false)
+const reloading = ref(false)
+async function reloadNodes() {
+  const ok = await confirmDialog({
+    title: 'Reload saved settings on all nodes?',
+    message: 'Every node on this gateway gets its saved settings again and restarts.',
+    confirmText: 'Send',
+  })
+  if (!ok) return
+  reloading.value = true
+  try {
+    const { data } = await api.post(`/gateways/${route.params.id}/reload-nodes`)
+    notify(data.count ? `Settings sent to ${data.count} node${data.count === 1 ? '' : 's'}` : 'This gateway has no nodes yet.', 'ok')
+  } catch (e) {
+    notify(e.response?.data?.error || 'Could not send the settings', 'error')
+  } finally {
+    reloading.value = false
+  }
+}
+
 async function restartNodes() {
   const ok = await confirmDialog({
     title: 'Restart all nodes?',
@@ -173,7 +197,7 @@ async function saveWifi(connectNow) {
       connectNow,
     })
     wifiSavedMsg.value = connectNow
-      ? 'Saved — the gateway is switching to this network.'
+      ? 'Saved. The gateway is switching to this network.'
       : 'Saved at the bottom of the list.'
     wifiSaved.value = true
     wifiSsid.value = ''

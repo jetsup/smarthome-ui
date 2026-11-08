@@ -29,9 +29,9 @@
       </div>
     </div>
     <div v-if="!loading && total > 0" class="card pager">
-      <button class="btn btn-sm" :disabled="page <= 1" @click="go(page - 1)">&lsaquo; Previous</button>
+      <button class="btn btn-sm" :disabled="page <= 1" @click="go(page - 1)"><Icon name="chevron-left" /> Previous</button>
       <span class="pinfo">Page {{ page }} of {{ pages }} <small>· {{ total }} events</small></span>
-      <button class="btn btn-sm" :disabled="page >= pages" @click="go(page + 1)">Next &rsaquo;</button>
+      <button class="btn btn-sm" :disabled="page >= pages" @click="go(page + 1)">Next <Icon name="chevron-right" /></button>
       <select v-model.number="pageSize" class="psize" aria-label="Events per page" @change="load(true)">
         <option :value="25">25 / page</option><option :value="50">50 / page</option><option :value="100">100 / page</option>
       </select>

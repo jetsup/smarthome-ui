@@ -18,7 +18,7 @@
   <div class="toast-stack" aria-live="polite">
     <div v-for="t in state.toasts" :key="t.id" :class="['toast-item', t.type]">
       <span>{{ t.message }}</span>
-      <button aria-label="Dismiss" @click="dismissToast(t.id)">&times;</button>
+      <button aria-label="Dismiss" @click="dismissToast(t.id)"><Icon name="x" /></button>
     </div>
   </div>
 </template>

@@ -58,12 +58,14 @@ export const useGatewayStore = defineStore('gateways', {
       return data
     },
 
-    async provisionNode(gatewayId, deviceId, force, name = '', capabilitiesConfig = []) {
+    async provisionNode(gatewayId, deviceId, force, name = '', capabilitiesConfig = [], code = '', adoptCode = '') {
       const { data } = await api.post(`/gateways/${gatewayId}/provision`, {
         deviceId,
         force: !!force,
         name,
         capabilitiesConfig,
+        code,
+        adoptCode,
       })
       return data
     },

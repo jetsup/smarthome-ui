@@ -1,12 +1,13 @@
 <template>
   <div class="fade-in">
-    <router-link :to="'/nodes/' + $route.params.nodeId" class="back-link">&larr; Back to node</router-link>
+    <router-link :to="'/nodes/' + $route.params.nodeId" class="back-link"><Icon name="arrow-left" /> Back to node</router-link>
 
     <div v-if="loading" class="state-msg">Loading…</div>
     <div v-else-if="!node" class="empty-state card"><p>Node not found.</p></div>
 
     <template v-else>
-      <h3 class="page-title">{{ node.name || 'Node ' + node.nodeId }} — Settings</h3>
+      <h3 class="page-title">{{ node.name || 'Node ' + node.nodeId }} settings</h3>
+      <p class="hint">Hardware address (MAC): <code>{{ node.mac || 'not reported yet' }}</code> · Device ID <code>{{ node.deviceId }}</code></p>
 
       <!-- Name -->
       <div class="card section">
@@ -21,6 +22,21 @@
         </form>
       </div>
 
+      <!-- Pairing code -->
+      <div class="card section">
+        <div class="section-header">
+          <h4>Pairing code</h4>
+          <p class="hint">To move this node to another gateway without reaching it, enter this code (or scan the QR in the app) when pairing it there. Keep it private.</p>
+        </div>
+        <div class="code-row">
+          <img v-if="qr" :src="qr" alt="Pairing QR code" class="qr" />
+          <div>
+            <code class="pair-code">{{ node.pairCode || '—' }}</code>
+            <div><button class="btn btn-secondary btn-sm" @click="copyCode">Copy code</button></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Maintenance -->
       <div class="card section">
         <div class="section-header">
@@ -32,6 +48,17 @@
         </button>
         <p v-if="!node.isOnline" class="hint">The node is offline.</p>
       </div>
+
+      <!-- Reload saved settings -->
+      <div class="card section">
+        <div class="section-header">
+          <h4>Saved settings</h4>
+          <p class="hint">Send the name, modules and key saved here to the node again. Use it when the node blinks its LED as if it were new (its memory was erased or it was re-flashed), or after changing something that did not reach it. The node restarts. It only needs to be within range of its gateway.</p>
+        </div>
+        <button class="btn btn-primary" :disabled="reloading" @click="reload">
+          {{ reloading ? 'Sending…' : 'Reload saved settings' }}
+        </button>
+      </div>
     </template>
   </div>
 </template>
@@ -39,6 +66,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import QRCode from 'qrcode'
 import api from '../services/api'
 import { confirmDialog, notify } from '../services/dialog'
 
@@ -50,6 +78,8 @@ const saving = ref(false)
 const nameMsg = ref('')
 const nameOk = ref(false)
 const restarting = ref(false)
+const reloading = ref(false)
+const qr = ref('')
 const nameChanged = computed(() => !!node.value && nameInput.value.trim() !== (node.value.name || ''))
 
 onMounted(async () => {
@@ -57,9 +87,14 @@ onMounted(async () => {
     const { data } = await api.get(`/nodes/${route.params.nodeId}`)
     node.value = data
     nameInput.value = data.name || ''
+    if (data.pairCode) qr.value = await QRCode.toDataURL('SHNODE:' + data.pairCode, { margin: 1, width: 180 })
   } catch { node.value = null }
   loading.value = false
 })
+
+async function copyCode() {
+  try { await navigator.clipboard.writeText(node.value.pairCode); notify('Pairing code copied', 'ok') } catch {}
+}
 
 async function saveName() {
   saving.value = true
@@ -74,6 +109,22 @@ async function saveName() {
     nameOk.value = false
     nameMsg.value = e.response?.data?.error || 'Could not rename'
   } finally { saving.value = false }
+}
+
+async function reload() {
+  const ok = await confirmDialog({
+    title: 'Reload saved settings?',
+    message: 'The saved name, modules and key are sent to the node and it restarts.',
+    confirmText: 'Send',
+  })
+  if (!ok) return
+  reloading.value = true
+  try {
+    await api.post(`/nodes/${route.params.nodeId}/reload-config`)
+    notify('Saved settings sent to the node', 'ok')
+  } catch (e) {
+    notify(e.response?.data?.error || 'Could not send the settings', 'error')
+  } finally { reloading.value = false }
 }
 
 async function restart() {
@@ -105,4 +156,7 @@ async function restart() {
 .name-form .field-input { flex: 1; min-width: 200px; }
 .ok-msg { color: var(--c-ok-text); font-size: 13px; margin-bottom: 8px; }
 .err-msg { color: var(--c-danger); font-size: 13px; margin-bottom: 8px; }
+.code-row { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
+.qr { width:140px; height:140px; background:#fff; padding:6px; border-radius:8px; }
+.pair-code { display:block; font-size:1.6rem; letter-spacing:.18em; margin-bottom:10px; }
 </style>

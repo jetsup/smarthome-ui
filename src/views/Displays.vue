@@ -7,7 +7,7 @@
       <div class="section-header">
         <h4>Pair a display</h4>
         <p class="hint">
-          On the display choose <strong>Pair this display → From the app or website</strong>. It shows a
+          On the display choose <strong>Pair this display</strong>, then <strong>From the app or website</strong>. It shows a
           6-digit code. Enter it here and pick the gateway the display belongs to.
         </p>
       </div>
@@ -31,7 +31,7 @@
           {{ pairing ? 'Pairing…' : 'Pair display' }}
         </button>
       </form>
-      <p v-if="gateways.length === 0 && !loading" class="hint">You need a gateway first — <router-link to="/gateways/create">create one</router-link>.</p>
+      <p v-if="gateways.length === 0 && !loading" class="hint">You need a gateway first. <router-link to="/gateways/create">create one</router-link>.</p>
     </div>
 
     <!-- Existing displays -->

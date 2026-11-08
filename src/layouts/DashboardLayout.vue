@@ -26,7 +26,7 @@
           </svg>
           <span class="logo-text">Smart<span>Home</span></span>
         </router-link>
-        <button class="sidebar-close" @click="sidebarOpen = false" aria-label="Close menu">&times;</button>
+        <button class="sidebar-close" @click="sidebarOpen = false" aria-label="Close menu"><Icon name="x" /></button>
       </div>
 
       <nav class="nav">

@@ -9,7 +9,7 @@
     <div class="about-grid">
       <div class="about-card">
         <h3>Our Mission</h3>
-        <p>We believe smart home technology should be accessible, secure, and private. SmartHome Hub puts you in control — your data stays on your infrastructure, and every device is authenticated.</p>
+        <p>We believe smart home technology should be accessible, secure, and private. SmartHome Hub puts you in control. Your data stays on your infrastructure, and every device is authenticated.</p>
       </div>
       <div class="about-card">
         <h3>How It Works</h3>

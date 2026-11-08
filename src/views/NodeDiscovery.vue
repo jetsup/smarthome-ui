@@ -1,8 +1,8 @@
 <template>
   <div class="fade-in">
-    <router-link to="/gateways" class="back-link">&larr; Back to Gateways</router-link>
+    <router-link to="/gateways" class="back-link"><Icon name="arrow-left" /> Back to Gateways</router-link>
     <h3>Find Nodes</h3>
-    <p class="page-desc">Scan for unprovisioned ESP-NOW nodes. Found nodes can be added to any of your gateways.</p>
+    <p class="page-desc">Scan for ESP-NOW nodes, new or already paired (a paired node needs its pairing code). Found nodes can be added to any of your gateways.</p>
 
     <div v-if="loadingGateways" class="state-msg">Loading gateways…</div>
 
@@ -28,7 +28,7 @@
           <tbody>
             <tr v-for="d in discovered" :key="d.deviceId + d.gatewayId">
               <td><code>{{ d.deviceId }}</code></td>
-              <td>{{ typeLabel(d.deviceType) }}</td>
+              <td>{{ typeLabel(d.deviceType) }} <span v-if="d.paired" class="badge badge-offline" title="Paired to a gateway: needs its code">Paired</span></td>
               <td><code>{{ d.gatewayId }}</code></td>
               <td>
                 <button class="btn btn-primary btn-sm" @click="openAddDialog(d)">Add</button>
@@ -51,11 +51,16 @@
         <div class="form-group">
           <label for="gw-select">Select gateway</label>
           <select id="gw-select" v-model="selectedGateway">
-            <option value="" disabled>— Choose a gateway —</option>
+            <option value="" disabled>Choose a gateway</option>
             <option v-for="gw in gateways" :key="gw.id" :value="gw.id">
               {{ gw.name }} ({{ gw.id }})
             </option>
           </select>
+        </div>
+        <div v-if="selectedNode?.paired" class="form-group">
+          <label for="node-code">Pairing code</label>
+          <input id="node-code" v-model="pairCode" placeholder="8 letters and digits" maxlength="16" autocapitalize="characters" style="text-transform:uppercase;letter-spacing:.12em" />
+          <p class="hint">This node is already paired to a gateway. Enter the code from its Settings page (or its QR code) to move it.</p>
         </div>
         <div class="form-group">
           <label for="node-name">Name</label>
@@ -64,7 +69,7 @@
         <div class="form-group">
           <label>What is wired to this node?</label>
           <CapabilityEditor v-model="caps" />
-          <p class="hint">Example: potentiometer on pin 34 → Analog input; LED on pin 25 → Digital output; a NeoPixel ring → NeoPixel LEDs with the number of LEDs.</p>
+          <p class="hint">Example: potentiometer on pin 34: Analog input; LED on pin 25: Digital output; a NeoPixel ring: NeoPixel LEDs with the number of LEDs.</p>
         </div>
         <div class="modal-actions">
           <button class="btn btn-secondary" @click="showModal = false">Cancel</button>
@@ -96,6 +101,7 @@ const showModal = ref(false)
 const selectedNode = ref(null)
 const selectedGateway = ref('')
 const provisioning = ref(false)
+const pairCode = ref('')
 const errorMsg = ref('')
 const nodeName = ref('')
 const caps = ref([blankCap()])
@@ -143,6 +149,7 @@ function openAddDialog(d) {
   selectedGateway.value = ''
   nodeName.value = ''
   caps.value = [blankCap()]
+  pairCode.value = ''
   errorMsg.value = ''
   showModal.value = true
 }
@@ -157,36 +164,18 @@ async function provisionNode() {
       gatewayId: selectedGateway.value,
       name: nodeName.value.trim(),
       capabilitiesConfig: capPayload(),
-      force: false,
+      code: pairCode.value,
     })
-    // Remove from discovered list
     discovered.value = discovered.value.filter(
       d => !(d.deviceId === selectedNode.value.deviceId && d.gatewayId === selectedNode.value.gatewayId)
     )
     showModal.value = false
   } catch (e) {
     const data = e.response?.data
-    if (data?.status === 'gateway_conflict') {
-      if (await confirmDialog({ title: 'Switch gateway?', message: data.message, confirmText: 'Switch gateway' })) {
-        try {
-          await api.post('/nodes/provision', {
-            deviceId: selectedNode.value.deviceId,
-            gatewayId: selectedGateway.value,
-            name: nodeName.value.trim(),
-            capabilitiesConfig: capPayload(),
-            force: true,
-          })
-          discovered.value = discovered.value.filter(
-            d => !(d.deviceId === selectedNode.value.deviceId && d.gatewayId === selectedNode.value.gatewayId)
-          )
-          showModal.value = false
-        } catch (e2) {
-          errorMsg.value = e2.response?.data?.error || 'Failed to switch gateway'
-        }
-      }
-    } else {
-      errorMsg.value = data?.error || 'Provision failed'
+    if (data?.status === 'code_required' || data?.status === 'code_invalid') {
+      selectedNode.value = { ...selectedNode.value, paired: true }
     }
+    errorMsg.value = data?.error || 'Provision failed'
   } finally {
     provisioning.value = false
   }

@@ -37,7 +37,7 @@
         <!-- approve on phone: the number is shown HERE, typed on the phone -->
         <template v-if="method === 'phone'">
           <template v-if="!challengeId">
-            <p class="how">We'll send a request to your phone. A 6-digit number appears here — type it on your phone and tap <strong>Approve</strong>.</p>
+            <p class="how">We'll send a request to your phone. A 6-digit number appears here. Type it on your phone and tap <strong>Approve</strong>.</p>
             <p v-if="error" class="error">{{ error }}</p>
             <button class="btn btn-primary btn-block" :disabled="loading" @click="startPhone">{{ loading ? 'Sending…' : 'Send request to my phone' }}</button>
           </template>
@@ -81,7 +81,7 @@
         </form>
 
         <div class="alts">
-          <button class="link" @click="backToStart">&larr; Back to sign in</button>
+          <button class="link" @click="backToStart"><Icon name="arrow-left" /> Back to sign in</button>
         </div>
       </template>
     </div>
